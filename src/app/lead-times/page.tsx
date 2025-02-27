@@ -3,6 +3,7 @@
 import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import { DemandCard } from "@/components/ui/DemandCard";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -58,6 +59,7 @@ interface DemandWithLeadTime {
   demand_title: string;
   commitment_date: string;
   end_date: string;
+  discarded_at: string | null;
   lead_time_days: number;
 }
 
@@ -89,22 +91,11 @@ export default function LeadTimesPage() {
         demand_title: demand.demand_title,
         commitment_date: demand.commitment_date,
         end_date: demand.end_date,
+        discarded_at: demand.discarded_at,
         lead_time_days: diffDays
       });
     });
   }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    
-    const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-    const month = months[date.getMonth()];
-    
-    const year = date.getFullYear();
-    
-    return `${day}/${month}/${year}`;
-  };
 
   const calculateP80 = (values: number[]): string => {
     if (values.length === 0) return "0";
@@ -329,42 +320,10 @@ export default function LeadTimesPage() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {demandsWithLeadTimes.map((demand) => (
-              <Card key={demand.id} className="overflow-hidden transition-all duration-200 hover:shadow-md border-t-4 border-t-green-500">
-                <div className="p-4">
-                  <div className="mb-4">
-                    <div className="text-sm font-medium text-gray-500 mb-1">SLUG</div>
-                    <div className="text-base font-bold break-words text-blue-700 uppercase">
-                      {demand.slug || 
-                        <span className="text-gray-400 italic">Sem slug</span>
-                      }
-                    </div>
-                  </div>
-                  
-                  <div className="pt-3 border-t">
-                    <div className="text-sm font-medium text-gray-500 mb-2">Título</div>
-                    <div className="text-lg font-semibold break-words">
-                      {demand.demand_title || 
-                        <span className="text-gray-400 italic">Sem título</span>
-                      }
-                    </div>
-                  </div>
-
-                  <div className="pt-3 mt-3 border-t">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-500">Lead Time</div>
-                        <div className="text-2xl font-bold text-green-600">{demand.lead_time_days.toFixed(2)} dias</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500">Início</div>
-                        <div className="text-sm">{formatDate(demand.commitment_date)}</div>
-                        <div className="text-xs text-gray-500 mt-1">Fim</div>
-                        <div className="text-sm">{formatDate(demand.end_date)}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              <DemandCard
+                key={demand.id}
+                demand={demand}
+              />
             ))}
           </div>
         </>

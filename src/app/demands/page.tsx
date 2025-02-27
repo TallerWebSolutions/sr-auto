@@ -2,7 +2,7 @@
 
 import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
-import Image from "next/image";
+import { DemandCard } from "@/components/ui/DemandCard";
 
 interface DemandsResponse {
   demands: {
@@ -94,50 +94,10 @@ export default function DemandsPage() {
       {demands.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {demands.map((demand) => (
-            <Card key={demand.id} className="overflow-hidden transition-all duration-200 hover:shadow-md border-t-4 border-t-blue-500">
-              <div className="p-4">
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-500 mb-1">SLUG</div>
-                  <div className="text-base font-bold break-words text-blue-700 uppercase">
-                    {demand.slug || 
-                      <span className="text-gray-400 italic">Sem slug</span>
-                    }
-                  </div>
-                </div>
-                
-                <div className="pt-3 border-t">
-                  <div className="text-sm font-medium text-gray-500 mb-2">Título</div>
-                  <div className="text-lg font-semibold break-words">
-                    {demand.demand_title || 
-                      <span className="text-gray-400 italic">Sem título</span>
-                    }
-                  </div>
-                </div>
-
-                {demand.slug && (
-                  <div className="flex justify-end gap-3 mt-4 pt-3 border-t">
-                    <a 
-                      href={`https://tallerflow.atlassian.net/browse/${demand.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                      title="Abrir no Jira"
-                    >
-                      <Image src="/icons/jira.svg" alt="Jira" width={20} height={20} />
-                    </a>
-                    <a 
-                      href={`https://www.flowclimate.com.br/companies/taller/demands/${demand.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                      title="Abrir no Flow Climate"
-                    >
-                      <Image src="/icons/taller.svg" alt="Flow Climate" width={20} height={20} />
-                    </a>
-                  </div>
-                )}
-              </div>
-            </Card>
+            <DemandCard
+              key={demand.id}
+              demand={demand}
+            />
           ))}
         </div>
       ) : (
