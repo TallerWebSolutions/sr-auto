@@ -127,6 +127,29 @@ export default function LeadTimesPage() {
     return result;
   };
 
+  const getStartOfWeek = (date: Date): Date => {
+    const result = new Date(date);
+    const day = result.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    result.setDate(result.getDate() - diff);
+    result.setHours(0, 0, 0, 0);
+    return result;
+  };
+
+  const formatWeekRange = (startOfWeek: Date): string => {
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    
+    const formatDay = (date: Date) => {
+      const day = date.getDate().toString().padStart(2, '0');
+      const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+      const month = months[date.getMonth()];
+      return `${day}/${month}`;
+    };
+    
+    return `${formatDay(startOfWeek)} - ${formatDay(endOfWeek)}`;
+  };
+
   const formatChartDate = (date: Date): string => {
     const day = date.getDate().toString().padStart(2, '0');
     const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -233,6 +256,33 @@ export default function LeadTimesPage() {
 
   const chartData = generateWeeklyP80Data();
 
+  const groupDemandsByWeek = () => {
+    const groupedDemands: Record<string, DemandWithLeadTime[]> = {};
+    
+    const sortedDemands = [...demandsWithLeadTimes].sort(
+      (a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime()
+    );
+    
+    sortedDemands.forEach(demand => {
+      const endDate = new Date(demand.end_date);
+      const startOfWeek = getStartOfWeek(endDate);
+      const weekKey = startOfWeek.toISOString();
+      
+      if (!groupedDemands[weekKey]) {
+        groupedDemands[weekKey] = [];
+      }
+      
+      groupedDemands[weekKey].push(demand);
+    });
+    
+    return groupedDemands;
+  };
+
+  const groupedDemands = groupDemandsByWeek();
+  const weekKeys = Object.keys(groupedDemands).sort(
+    (a, b) => new Date(b).getTime() - new Date(a).getTime()
+  );
+
   if (loading) {
     return (
       <main className="container mx-auto p-4">
@@ -318,14 +368,44 @@ export default function LeadTimesPage() {
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {demandsWithLeadTimes.map((demand) => (
-              <DemandCard
-                key={demand.id}
-                demand={demand}
-              />
-            ))}
-          </div>
+          {weekKeys.length > 0 ? (
+            <div className="space-y-8">
+              {weekKeys.map(weekKey => {
+                const startOfWeek = new Date(weekKey);
+                const weekRange = formatWeekRange(startOfWeek);
+                const weekDemands = groupedDemands[weekKey];
+                
+                return (
+                  <div key={weekKey} className="mb-8">
+                    <div className="flex items-center mb-4 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                      <h3 className="text-xl font-bold text-blue-900">Semana: {weekRange}</h3>
+                      <span className="ml-3 bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">
+                        {weekDemands.length} demanda{weekDemands.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {weekDemands.map((demand) => (
+                        <DemandCard
+                          key={demand.id}
+                          demand={demand}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200">
+              <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h2 className="text-xl font-semibold mb-2">Nenhuma demanda com lead time válido</h2>
+              <p className="text-gray-500">
+                Não foram encontradas demandas com datas de início e fim válidas, ou todas foram descartadas.
+              </p>
+            </div>
+          )}
         </>
       ) : (
         <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200">
