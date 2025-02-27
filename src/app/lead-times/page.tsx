@@ -114,18 +114,28 @@ export default function LeadTimesPage() {
     return `${day}/${month}/${year}`;
   };
 
-  // Calculate P80 (80th percentile) of lead times
+  // Calculate P80 (80th percentile) of lead times using linear interpolation
   const calculateP80 = (values: number[]): string => {
     if (values.length === 0) return "0";
     
     // Sort the values in ascending order
     const sortedValues = [...values].sort((a, b) => a - b);
     
-    // Calculate the index for the 80th percentile
-    const index = Math.ceil(sortedValues.length * 0.8) - 1;
+    // Calculate the rank for the 80th percentile
+    const desiredPercentile = 80;
+    const rank = (desiredPercentile / 100.0) * (sortedValues.length - 1);
     
-    // Get the value at that index
-    return sortedValues[index].toFixed(2);
+    // Get the floor of the rank to find the lower bound index
+    const lowerIndex = Math.floor(rank);
+    
+    // Get the lower and upper values
+    const lower = sortedValues[lowerIndex];
+    const upper = sortedValues[lowerIndex + 1];
+    
+    // Calculate the interpolated value
+    const interpolatedValue = lower + ((upper - lower) * (rank - lowerIndex));
+    
+    return interpolatedValue.toFixed(2);
   };
   
   // Get all lead time values
@@ -134,11 +144,11 @@ export default function LeadTimesPage() {
   // Calculate P80
   const p80LeadTime = calculateP80(leadTimeValues);
 
-  // Function to get the Saturday of a given date's week
-  const getSaturdayOfWeek = (date: Date): Date => {
+  // Function to get the Sunday of a given date's week
+  const getSundayOfWeek = (date: Date): Date => {
     const result = new Date(date);
     const day = result.getDay(); // 0 is Sunday, 6 is Saturday
-    const diff = day === 6 ? 0 : 6 - day; // If already Saturday, diff is 0
+    const diff = day === 0 ? 0 : 7 - day; // If already Sunday, diff is 0
     result.setDate(result.getDate() + diff);
     return result;
   };
@@ -164,29 +174,32 @@ export default function LeadTimesPage() {
 
     // Get first and last dates
     const firstEndDate = new Date(sortedDemands[0].end_date);
-    const firstWeekSaturday = getSaturdayOfWeek(firstEndDate);
+    const firstWeekSunday = getSundayOfWeek(firstEndDate);
     
     // Use March 1, 2025 as the end date (as specified)
     const lastDate = new Date('2025-03-01');
-    const lastWeekSaturday = getSaturdayOfWeek(lastDate);
+    const lastWeekSunday = getSundayOfWeek(lastDate);
 
-    // Generate all Saturdays between first and last
-    const saturdays: Date[] = [];
-    const initialSaturday = new Date(firstWeekSaturday);
-    let currentDate = initialSaturday;
+    // Generate all Sundays between first and last
+    const sundays: Date[] = [];
+    let nextSunday = new Date(firstWeekSunday);
     
-    while (currentDate <= lastWeekSaturday) {
-      saturdays.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + 7);
+    // Add each Sunday until we reach the last one
+    while (nextSunday <= lastWeekSunday) {
+      sundays.push(new Date(nextSunday));
+      // Create a new date for the next Sunday
+      const newDate = new Date(nextSunday);
+      newDate.setDate(newDate.getDate() + 7);
+      nextSunday = newDate;
     }
 
     // Calculate P80 for each week
     const weeklyP80Values: number[] = [];
     
-    saturdays.forEach((saturday, index) => {
-      // For each Saturday, consider all demands completed up to this date
+    sundays.forEach((sunday, index) => {
+      // For each Sunday, consider all demands completed up to this date
       const demandsUpToDate = sortedDemands.filter(
-        demand => new Date(demand.end_date) <= saturday
+        demand => new Date(demand.end_date) <= sunday
       );
       
       if (demandsUpToDate.length > 0) {
@@ -203,7 +216,7 @@ export default function LeadTimesPage() {
     });
 
     // Format dates for chart labels
-    const labels = saturdays.map(formatChartDate);
+    const labels = sundays.map(formatChartDate);
 
     return {
       labels,
@@ -253,7 +266,7 @@ export default function LeadTimesPage() {
       x: {
         title: {
           display: true,
-          text: 'Semana (término no sábado)'
+          text: 'Semana (término no domingo)'
         }
       }
     }
@@ -344,7 +357,7 @@ export default function LeadTimesPage() {
               <Line options={chartOptions} data={chartData} />
             </div>
             <p className="text-xs text-gray-500 mt-2 text-center">
-              Cada ponto representa o P80 calculado com todas as demandas concluídas até o sábado daquela semana
+              Cada ponto representa o P80 calculado com todas as demandas concluídas até o domingo daquela semana
             </p>
           </div>
 
