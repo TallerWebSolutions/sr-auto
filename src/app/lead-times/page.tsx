@@ -3,6 +3,28 @@
 import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement, 
+  Title, 
+  Tooltip, 
+  Legend 
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface DemandsResponse {
   demands: {
@@ -92,6 +114,154 @@ export default function LeadTimesPage() {
     return `${day}/${month}/${year}`;
   };
 
+  // Calculate P80 (80th percentile) of lead times
+  const calculateP80 = (values: number[]): string => {
+    if (values.length === 0) return "0";
+    
+    // Sort the values in ascending order
+    const sortedValues = [...values].sort((a, b) => a - b);
+    
+    // Calculate the index for the 80th percentile
+    const index = Math.ceil(sortedValues.length * 0.8) - 1;
+    
+    // Get the value at that index
+    return sortedValues[index].toFixed(2);
+  };
+  
+  // Get all lead time values
+  const leadTimeValues = demandsWithLeadTimes.map(demand => demand.lead_time_days);
+  
+  // Calculate P80
+  const p80LeadTime = calculateP80(leadTimeValues);
+
+  // Function to get the Saturday of a given date's week
+  const getSaturdayOfWeek = (date: Date): Date => {
+    const result = new Date(date);
+    const day = result.getDay(); // 0 is Sunday, 6 is Saturday
+    const diff = day === 6 ? 0 : 6 - day; // If already Saturday, diff is 0
+    result.setDate(result.getDate() + diff);
+    return result;
+  };
+
+  // Function to format date as dd/MMM for chart labels
+  const formatChartDate = (date: Date): string => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const month = months[date.getMonth()];
+    return `${day}/${month}`;
+  };
+
+  // Generate weekly P80 data
+  const generateWeeklyP80Data = () => {
+    if (demandsWithLeadTimes.length === 0) {
+      return { labels: [], datasets: [] };
+    }
+
+    // Sort demands by end_date
+    const sortedDemands = [...demandsWithLeadTimes].sort(
+      (a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
+    );
+
+    // Get first and last dates
+    const firstEndDate = new Date(sortedDemands[0].end_date);
+    const firstWeekSaturday = getSaturdayOfWeek(firstEndDate);
+    
+    // Use March 1, 2025 as the end date (as specified)
+    const lastDate = new Date('2025-03-01');
+    const lastWeekSaturday = getSaturdayOfWeek(lastDate);
+
+    // Generate all Saturdays between first and last
+    const saturdays: Date[] = [];
+    const initialSaturday = new Date(firstWeekSaturday);
+    let currentDate = initialSaturday;
+    
+    while (currentDate <= lastWeekSaturday) {
+      saturdays.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 7);
+    }
+
+    // Calculate P80 for each week
+    const weeklyP80Values: number[] = [];
+    
+    saturdays.forEach((saturday, index) => {
+      // For each Saturday, consider all demands completed up to this date
+      const demandsUpToDate = sortedDemands.filter(
+        demand => new Date(demand.end_date) <= saturday
+      );
+      
+      if (demandsUpToDate.length > 0) {
+        const leadTimesUpToDate = demandsUpToDate.map(d => d.lead_time_days);
+        const p80Value = parseFloat(calculateP80(leadTimesUpToDate));
+        weeklyP80Values.push(p80Value);
+      } else if (index > 0) {
+        // If no demands in this week, use previous week's value
+        weeklyP80Values.push(weeklyP80Values[index - 1]);
+      } else {
+        // First week with no demands (shouldn't happen given our filter)
+        weeklyP80Values.push(0);
+      }
+    });
+
+    // Format dates for chart labels
+    const labels = saturdays.map(formatChartDate);
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'P80 Lead Time (dias)',
+          data: weeklyP80Values,
+          borderColor: 'rgb(59, 130, 246)',
+          backgroundColor: 'rgba(59, 130, 246, 0.5)',
+          tension: 0.3,
+        },
+      ],
+    };
+  };
+
+  // Chart options
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Evolução do P80 de Lead Time por Semana',
+      },
+      tooltip: {
+        callbacks: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          label: function(context: any) {
+            if (typeof context.raw === 'number') {
+              return `P80: ${context.raw.toFixed(2)} dias`;
+            }
+            return '';
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Dias'
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Semana (término no sábado)'
+        }
+      }
+    }
+  };
+
+  // Generate chart data
+  const chartData = generateWeeklyP80Data();
+
   if (loading) {
     return (
       <main className="container mx-auto p-4">
@@ -139,26 +309,6 @@ export default function LeadTimesPage() {
     );
   }
 
-  // Calculate P80 (80th percentile) of lead times
-  const calculateP80 = (values: number[]): string => {
-    if (values.length === 0) return "0";
-    
-    // Sort the values in ascending order
-    const sortedValues = [...values].sort((a, b) => a - b);
-    
-    // Calculate the index for the 80th percentile
-    const index = Math.ceil(sortedValues.length * 0.8) - 1;
-    
-    // Get the value at that index
-    return sortedValues[index].toFixed(2);
-  };
-  
-  // Get all lead time values
-  const leadTimeValues = demandsWithLeadTimes.map(demand => demand.lead_time_days);
-  
-  // Calculate P80
-  const p80LeadTime = calculateP80(leadTimeValues);
-
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
@@ -185,6 +335,17 @@ export default function LeadTimesPage() {
                 <span className="text-xs text-gray-500 mt-1">80% das demandas abaixo deste valor</span>
               </div>
             </div>
+          </div>
+
+          {/* Weekly P80 Trend Chart */}
+          <div className="mb-8 p-4 bg-white border rounded-lg shadow-sm">
+            <h2 className="text-lg font-semibold mb-4">Evolução Semanal do P80</h2>
+            <div className="h-80">
+              <Line options={chartOptions} data={chartData} />
+            </div>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Cada ponto representa o P80 calculado com todas as demandas concluídas até o sábado daquela semana
+            </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
