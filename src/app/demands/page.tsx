@@ -2,6 +2,7 @@
 
 import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
+import Image from "next/image";
 
 interface DemandsResponse {
   demands: {
@@ -38,12 +39,8 @@ export default function DemandsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i} className="p-4 animate-pulse">
-              <div className="flex justify-between mb-3">
-                <div className="h-6 bg-gray-200 rounded w-1/4"></div>
-                <div className="h-6 bg-gray-200 rounded-full w-12"></div>
-              </div>
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+              <div className="h-5 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="h-6 bg-gray-200 rounded w-1/2 mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-full mt-3"></div>
             </Card>
           ))}
@@ -93,30 +90,46 @@ export default function DemandsPage() {
           {demands.map((demand) => (
             <Card key={demand.id} className="overflow-hidden transition-all duration-200 hover:shadow-md border-t-4 border-t-blue-500">
               <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm font-medium text-gray-500">ID</div>
-                  <div className="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
-                    {demand.id}
+                <div className="mb-4">
+                  <div className="text-sm font-medium text-gray-500 mb-1">SLUG</div>
+                  <div className="text-base font-bold break-words text-blue-700 uppercase">
+                    {demand.slug || 
+                      <span className="text-gray-400 italic">Sem slug</span>
+                    }
                   </div>
                 </div>
                 
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-500 mb-1">Título</div>
+                <div className="pt-3 border-t">
+                  <div className="text-sm font-medium text-gray-500 mb-2">Título</div>
                   <div className="text-lg font-semibold break-words">
                     {demand.demand_title || 
                       <span className="text-gray-400 italic">Sem título</span>
                     }
                   </div>
                 </div>
-                
-                <div className="pt-3 border-t">
-                  <div className="text-sm font-medium text-gray-500 mb-1">Slug</div>
-                  <div className="text-base font-medium break-words text-gray-700">
-                    {demand.slug || 
-                      <span className="text-gray-400 italic">Sem slug</span>
-                    }
+
+                {demand.slug && (
+                  <div className="flex justify-end gap-3 mt-4 pt-3 border-t">
+                    <a 
+                      href={`https://tallerflow.atlassian.net/browse/${demand.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                      title="Abrir no Jira"
+                    >
+                      <Image src="/icons/jira.svg" alt="Jira" width={20} height={20} />
+                    </a>
+                    <a 
+                      href={`https://www.flowclimate.com.br/companies/taller/demands/${demand.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                      title="Abrir no Flow Climate"
+                    >
+                      <Image src="/icons/taller.svg" alt="Flow Climate" width={20} height={20} />
+                    </a>
                   </div>
-                </div>
+                )}
               </div>
             </Card>
           ))}
