@@ -15,7 +15,6 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -67,12 +66,10 @@ export default function LeadTimesPage() {
     fetchPolicy: "network-only",
   });
 
-  // Calculate lead times for valid demands
   const demandsWithLeadTimes: DemandWithLeadTime[] = [];
   
   if (data?.demands) {
     data.demands.forEach(demand => {
-      // Skip demands that were discarded or don't have end_date or commitment_date
       if (
         demand.discarded_at !== null || 
         demand.end_date === null || 
@@ -81,11 +78,10 @@ export default function LeadTimesPage() {
         return;
       }
       
-      // Calculate lead time in days
       const endDate = new Date(demand.end_date);
       const commitmentDate = new Date(demand.commitment_date);
       const diffTime = Math.abs(endDate.getTime() - commitmentDate.getTime());
-      const diffDays = diffTime / (1000 * 60 * 60 * 24); // Remove Math.ceil to keep decimal places
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
       
       demandsWithLeadTimes.push({
         id: demand.id,
@@ -97,15 +93,11 @@ export default function LeadTimesPage() {
       });
     });
   }
-  
-  // No need to sort here as the data is already sorted by the GraphQL query
 
-  // Function to format date as dd/MMM/yyyy
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const day = date.getDate().toString().padStart(2, '0');
     
-    // Get month in Portuguese
     const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
     const month = months[date.getMonth()];
     
@@ -114,46 +106,36 @@ export default function LeadTimesPage() {
     return `${day}/${month}/${year}`;
   };
 
-  // Calculate P80 (80th percentile) of lead times using linear interpolation
   const calculateP80 = (values: number[]): string => {
     if (values.length === 0) return "0";
     
-    // Sort the values in ascending order
     const sortedValues = [...values].sort((a, b) => a - b);
     
-    // Calculate the rank for the 80th percentile
     const desiredPercentile = 80;
     const rank = (desiredPercentile / 100.0) * (sortedValues.length - 1);
     
-    // Get the floor of the rank to find the lower bound index
     const lowerIndex = Math.floor(rank);
     
-    // Get the lower and upper values
     const lower = sortedValues[lowerIndex];
     const upper = sortedValues[lowerIndex + 1];
     
-    // Calculate the interpolated value
     const interpolatedValue = lower + ((upper - lower) * (rank - lowerIndex));
     
     return interpolatedValue.toFixed(2);
   };
   
-  // Get all lead time values
   const leadTimeValues = demandsWithLeadTimes.map(demand => demand.lead_time_days);
   
-  // Calculate P80
   const p80LeadTime = calculateP80(leadTimeValues);
 
-  // Function to get the Sunday of a given date's week
   const getSundayOfWeek = (date: Date): Date => {
     const result = new Date(date);
-    const day = result.getDay(); // 0 is Sunday, 6 is Saturday
-    const diff = day === 0 ? 0 : 7 - day; // If already Sunday, diff is 0
+    const day = result.getDay();
+    const diff = day === 0 ? 0 : 7 - day;
     result.setDate(result.getDate() + diff);
     return result;
   };
 
-  // Function to format date as dd/MMM for chart labels
   const formatChartDate = (date: Date): string => {
     const day = date.getDate().toString().padStart(2, '0');
     const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -161,43 +143,34 @@ export default function LeadTimesPage() {
     return `${day}/${month}`;
   };
 
-  // Generate weekly P80 data
   const generateWeeklyP80Data = () => {
     if (demandsWithLeadTimes.length === 0) {
       return { labels: [], datasets: [] };
     }
 
-    // Sort demands by end_date
     const sortedDemands = [...demandsWithLeadTimes].sort(
       (a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
     );
 
-    // Get first and last dates
     const firstEndDate = new Date(sortedDemands[0].end_date);
     const firstWeekSunday = getSundayOfWeek(firstEndDate);
     
-    // Use March 1, 2025 as the end date (as specified)
     const lastDate = new Date('2025-03-01');
     const lastWeekSunday = getSundayOfWeek(lastDate);
 
-    // Generate all Sundays between first and last
     const sundays: Date[] = [];
     let nextSunday = new Date(firstWeekSunday);
     
-    // Add each Sunday until we reach the last one
     while (nextSunday <= lastWeekSunday) {
       sundays.push(new Date(nextSunday));
-      // Create a new date for the next Sunday
       const newDate = new Date(nextSunday);
       newDate.setDate(newDate.getDate() + 7);
       nextSunday = newDate;
     }
 
-    // Calculate P80 for each week
     const weeklyP80Values: number[] = [];
     
     sundays.forEach((sunday, index) => {
-      // For each Sunday, consider all demands completed up to this date
       const demandsUpToDate = sortedDemands.filter(
         demand => new Date(demand.end_date) <= sunday
       );
@@ -207,15 +180,12 @@ export default function LeadTimesPage() {
         const p80Value = parseFloat(calculateP80(leadTimesUpToDate));
         weeklyP80Values.push(p80Value);
       } else if (index > 0) {
-        // If no demands in this week, use previous week's value
         weeklyP80Values.push(weeklyP80Values[index - 1]);
       } else {
-        // First week with no demands (shouldn't happen given our filter)
         weeklyP80Values.push(0);
       }
     });
 
-    // Format dates for chart labels
     const labels = sundays.map(formatChartDate);
 
     return {
@@ -232,7 +202,6 @@ export default function LeadTimesPage() {
     };
   };
 
-  // Chart options
   const chartOptions = {
     responsive: true,
     plugins: {
@@ -245,7 +214,6 @@ export default function LeadTimesPage() {
       },
       tooltip: {
         callbacks: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           label: function(context: any) {
             if (typeof context.raw === 'number') {
               return `P80: ${context.raw.toFixed(2)} dias`;
@@ -272,7 +240,6 @@ export default function LeadTimesPage() {
     }
   };
 
-  // Generate chart data
   const chartData = generateWeeklyP80Data();
 
   if (loading) {
@@ -350,7 +317,6 @@ export default function LeadTimesPage() {
             </div>
           </div>
 
-          {/* Weekly P80 Trend Chart */}
           <div className="mb-8 p-4 bg-white border rounded-lg shadow-sm">
             <h2 className="text-lg font-semibold mb-4">Evolução Semanal do P80</h2>
             <div className="h-80">
@@ -415,4 +381,4 @@ export default function LeadTimesPage() {
       )}
     </main>
   );
-} 
+}

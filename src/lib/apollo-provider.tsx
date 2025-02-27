@@ -7,7 +7,6 @@ import {
   createHttpLink,
 } from "@apollo/client";
 
-// Usando variáveis de ambiente para configuração do GraphQL
 const GRAPHQL_URL = process.env.NEXT_PUBLIC_HASURA_GRAPHQL_URL || 'https://ace-gannet-55.hasura.app/v1/graphql';
 const HASURA_SECRET = process.env.NEXT_PUBLIC_HASURA_ADMIN_SECRET || '';
 
