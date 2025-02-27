@@ -27,6 +27,9 @@ export default function RootLayout({
             <Link href="/demands" className="hover:text-gray-300">
               Demands
             </Link>
+            <Link href="/lead-times" className="hover:text-gray-300">
+              Lead Times
+            </Link>
           </div>
         </nav>
         <ApolloWrapper>{children}</ApolloWrapper>

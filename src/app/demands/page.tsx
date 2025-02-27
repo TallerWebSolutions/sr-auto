@@ -9,6 +9,9 @@ interface DemandsResponse {
     id: string;
     slug: string;
     demand_title: string;
+    commitment_date: string | null;
+    discarded_at: string | null;
+    end_date: string | null;
   }[];
 }
 
@@ -18,6 +21,9 @@ const DEMANDS_QUERY = gql`
       id
       slug
       demand_title
+      commitment_date
+      discarded_at
+      end_date
     }
   }
 `;
