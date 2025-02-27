@@ -2,7 +2,24 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+### Configuração de Variáveis de Ambiente
+
+Antes de iniciar o projeto, você precisa configurar as variáveis de ambiente:
+
+1. Copie o arquivo `.env.example` para `.env.local`:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. Edite o arquivo `.env.local` e adicione suas credenciais do Hasura:
+   ```
+   NEXT_PUBLIC_HASURA_GRAPHQL_URL=https://seu-hasura-url.com/v1/graphql
+   NEXT_PUBLIC_HASURA_ADMIN_SECRET=sua_chave_secreta_aqui
+   ```
+
+### Executando o Projeto
+
+Depois de configurar as variáveis de ambiente, execute o servidor de desenvolvimento:
 
 ```bash
 npm run dev
