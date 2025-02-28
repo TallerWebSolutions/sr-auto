@@ -226,6 +226,15 @@ export default function LeadTimesPage() {
       title: {
         display: true,
         text: 'Evolução do P80 de Lead Time por Semana',
+        color: '#1e3a8a',
+        font: {
+          size: 16,
+          weight: 'bold' as const
+        },
+        padding: {
+          top: 10,
+          bottom: 15
+        }
       },
       tooltip: {
         callbacks: {
@@ -235,7 +244,12 @@ export default function LeadTimesPage() {
             }
             return '';
           }
-        }
+        },
+        backgroundColor: 'rgba(30, 58, 138, 0.8)',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: '#3b82f6',
+        borderWidth: 1
       }
     },
     scales: {
@@ -243,13 +257,33 @@ export default function LeadTimesPage() {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Dias'
+          text: 'Dias',
+          color: '#1e3a8a',
+          font: {
+            weight: 'bold' as const
+          }
+        },
+        ticks: {
+          color: '#1e40af'
+        },
+        grid: {
+          color: 'rgba(219, 234, 254, 0.5)'
         }
       },
       x: {
         title: {
           display: true,
-          text: 'Semana (término no domingo)'
+          text: 'Semana (término no domingo)',
+          color: '#1e3a8a',
+          font: {
+            weight: 'bold' as const
+          }
+        },
+        ticks: {
+          color: '#1e40af'
+        },
+        grid: {
+          color: 'rgba(219, 234, 254, 0.5)'
         }
       }
     }
@@ -359,12 +393,12 @@ export default function LeadTimesPage() {
             </div>
           </div>
 
-          <div className="mb-8 p-4 bg-white border rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold mb-4">Evolução Semanal do P80</h2>
-            <div className="h-80">
+          <div className="mb-8 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-sm">
+            <h2 className="text-xl font-bold text-blue-900 mb-4">Evolução Semanal do P80</h2>
+            <div className="h-80 bg-white p-3 rounded-lg">
               <Line options={chartOptions} data={chartData} />
             </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">
+            <p className="text-xs text-blue-700 mt-3 text-center">
               Cada ponto representa o P80 calculado com todas as demandas concluídas até o domingo daquela semana
             </p>
           </div>
