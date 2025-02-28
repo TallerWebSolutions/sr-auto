@@ -12,7 +12,8 @@ import {
   LineElement, 
   Title, 
   Tooltip, 
-  Legend 
+  Legend, 
+  TooltipItem
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
@@ -228,7 +229,7 @@ export default function LeadTimesPage() {
       },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function(context: TooltipItem<'line'>) {
             if (typeof context.raw === 'number') {
               return `P80: ${context.raw.toFixed(2)} dias`;
             }
