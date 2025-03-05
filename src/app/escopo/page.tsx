@@ -15,6 +15,7 @@ import {
   Legend,
   TooltipItem
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 
 ChartJS.register(
@@ -24,7 +25,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  annotationPlugin
 );
 
 interface DemandsResponse {
@@ -37,6 +39,24 @@ interface DemandsResponse {
     end_date: string | null;
   }[];
 }
+
+interface ProjectResponse {
+  projects: {
+    id: string;
+    start_date: string;
+    end_date: string;
+  }[];
+}
+
+const PROJECT_QUERY = gql`
+  query ProjectQuery {
+    projects(where: {id: {_eq: "2226"}}) {
+      id
+      start_date
+      end_date
+    }
+  }
+`;
 
 const SCOPE_QUERY = gql`
   query ProjectScopeQuery {
@@ -69,9 +89,16 @@ interface WeeklyData {
 }
 
 export default function ScopePage() {
-  const { loading, error, data } = useQuery<DemandsResponse>(SCOPE_QUERY, {
+  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(SCOPE_QUERY, {
     fetchPolicy: "network-only",
   });
+  
+  const { loading: projectLoading, error: projectError, data: projectData } = useQuery<ProjectResponse>(PROJECT_QUERY, {
+    fetchPolicy: "network-only",
+  });
+  
+  const loading = demandsLoading || projectLoading;
+  const error = demandsError || projectError;
 
   // Format date function
   const formatDate = (dateString: string | null) => {
@@ -111,12 +138,12 @@ export default function ScopePage() {
 
   // Process demands data to get weekly burnup data
   const processWeeklyData = (): WeeklyData[] => {
-    if (!data?.demands || data.demands.length === 0) {
+    if (!demandsData?.demands || demandsData.demands.length === 0) {
       return [];
     }
 
     // Filter out discarded demands
-    const filteredDemands: DemandWithDates[] = data.demands
+    const filteredDemands: DemandWithDates[] = demandsData.demands
       .filter(demand => demand.discarded_at === null)
       .map(demand => ({
         id: demand.id,
@@ -126,43 +153,46 @@ export default function ScopePage() {
         end_date: demand.end_date
       }));
 
-    // Find the earliest and latest dates
+    // Find the earliest and latest dates based on project dates if available
     let earliestDate: Date | null = null;
     let latestDate: Date | null = null;
+    const currentDate = new Date();
 
-    filteredDemands.forEach(demand => {
-      if (demand.creation_date) {
-        const creationDate = new Date(demand.creation_date);
-        if (!earliestDate || creationDate < earliestDate) {
-          earliestDate = creationDate;
-        }
-        if (!latestDate || creationDate > latestDate) {
-          latestDate = creationDate;
-        }
+    // Use project start and end dates if available
+    if (projectData?.projects && projectData.projects.length > 0) {
+      const project = projectData.projects[0];
+      if (project.start_date) {
+        earliestDate = new Date(project.start_date);
       }
-      
-      if (demand.end_date) {
-        const endDate = new Date(demand.end_date);
-        if (!latestDate || endDate > latestDate) {
-          latestDate = endDate;
-        }
+      if (project.end_date) {
+        latestDate = new Date(project.end_date);
       }
-    });
+    }
+
+    // If project dates are not available, fall back to demand dates
+    if (!earliestDate || !latestDate) {
+      filteredDemands.forEach(demand => {
+        if (demand.creation_date) {
+          const creationDate = new Date(demand.creation_date);
+          if (!earliestDate || creationDate < earliestDate) {
+            earliestDate = creationDate;
+          }
+          if (!latestDate || creationDate > latestDate) {
+            latestDate = creationDate;
+          }
+        }
+        
+        if (demand.end_date) {
+          const endDate = new Date(demand.end_date);
+          if (!latestDate || endDate > latestDate) {
+            latestDate = endDate;
+          }
+        }
+      });
+    }
 
     if (!earliestDate || !latestDate) {
       return [];
-    }
-
-    // Ensure we have at least the current week
-    const currentDate = new Date();
-    if (!latestDate) {
-      latestDate = currentDate;
-    } else {
-      // Explicit type check to ensure latestDate is treated as Date
-      const latestDateValue = latestDate as Date;
-      if (latestDateValue.getTime() < currentDate.getTime()) {
-        latestDate = currentDate;
-      }
     }
 
     // Generate all weeks between earliest and latest date
@@ -216,15 +246,18 @@ export default function ScopePage() {
       
       if (demand.end_date) {
         const endDate = new Date(demand.end_date);
-        const [weekNum, year] = getWeekNumber(endDate);
-        const weekLabel = formatWeekLabel(weekNum, year);
-        
-        // Find the index of this week in our array
-        const weekIndex = weeks.findIndex(w => w.weekLabel === weekLabel);
-        if (weekIndex !== -1) {
-          // Increment all weeks from this point forward
-          for (let i = weekIndex; i < weeks.length; i++) {
-            weeks[i].deliveredDemands++;
+        // Only count delivered demands up to the current date
+        if (endDate <= currentDate) {
+          const [weekNum, year] = getWeekNumber(endDate);
+          const weekLabel = formatWeekLabel(weekNum, year);
+          
+          // Find the index of this week in our array
+          const weekIndex = weeks.findIndex(w => w.weekLabel === weekLabel);
+          if (weekIndex !== -1) {
+            // Increment all weeks from this point forward
+            for (let i = weekIndex; i < weeks.length; i++) {
+              weeks[i].deliveredDemands++;
+            }
           }
         }
       }
@@ -234,6 +267,40 @@ export default function ScopePage() {
   };
 
   const weeklyData = processWeeklyData();
+  
+  // Find current week index for highlighting
+  const getCurrentWeekIndex = (): number => {
+    const currentDate = new Date();
+    const [currentWeekNum, currentYear] = getWeekNumber(currentDate);
+    const currentWeekLabel = formatWeekLabel(currentWeekNum, currentYear);
+    
+    // Find the closest week if exact match not found
+    if (weeklyData.length === 0) return -1;
+    
+    const exactMatch = weeklyData.findIndex(week => week.weekLabel === currentWeekLabel);
+    if (exactMatch !== -1) return exactMatch;
+    
+    // If no exact match, find the closest week before current date
+    const currentDay = currentDate.getDate();
+    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+    
+    for (let i = 0; i < weeklyData.length; i++) {
+      const parts = weeklyData[i].weekLabel.split('/');
+      const weekDay = parseInt(parts[0]);
+      const weekMonth = parseInt(parts[1]);
+      
+      // If this week is in a future month or the same month but future day
+      if (weekMonth > currentMonth || (weekMonth === currentMonth && weekDay > currentDay)) {
+        // Return the previous week, or 0 if this is the first week
+        return i > 0 ? i - 1 : 0;
+      }
+    }
+    
+    // If we get here, all weeks are before current date, return the last week
+    return weeklyData.length - 1;
+  };
+  
+  const currentWeekIndex = getCurrentWeekIndex();
   
   // Prepare chart data for burnup
   const burnupData = {
@@ -256,6 +323,22 @@ export default function ScopePage() {
         borderWidth: 2,
         fill: true,
         tension: 0.1
+      },
+      {
+        label: 'Progresso Ideal',
+        data: weeklyData.map((_, index) => {
+          const totalWeeks = weeklyData.length;
+          if (totalWeeks === 0) return 0;
+          
+          const latestScope = weeklyData[weeklyData.length - 1].totalDemands;
+          return (latestScope / totalWeeks) * (index + 1);
+        }),
+        borderColor: 'rgb(234, 88, 12)',
+        borderWidth: 2,
+        borderDash: [5, 5],
+        fill: false,
+        tension: 0.1,
+        pointRadius: 0
       }
     ],
   };
@@ -286,6 +369,27 @@ export default function ScopePage() {
               return `${context.dataset.label}: ${context.raw} demandas`;
             }
             return '';
+          }
+        }
+      },
+      annotation: {
+        annotations: {
+          currentWeekLine: {
+            type: 'line' as const,
+            xMin: currentWeekIndex,
+            xMax: currentWeekIndex,
+            borderColor: 'rgba(255, 99, 132, 0.8)',
+            borderWidth: 2,
+            borderDash: [6, 6],
+            label: {
+              display: true,
+              content: 'Semana Atual',
+              position: 'start' as const,
+              backgroundColor: 'rgba(255, 99, 132, 0.8)',
+              font: {
+                weight: 'bold' as const
+              }
+            }
           }
         }
       }
@@ -365,9 +469,13 @@ export default function ScopePage() {
   }
 
   // Calculate current metrics
-  const totalDemands = data?.demands.filter(d => d.discarded_at === null).length || 0;
-  const deliveredDemands = data?.demands.filter(d => d.end_date !== null && d.discarded_at === null).length || 0;
+  const totalDemands = demandsData?.demands.filter(d => d.discarded_at === null).length || 0;
+  const deliveredDemands = demandsData?.demands.filter(d => d.end_date !== null && d.discarded_at === null).length || 0;
   const completionRate = totalDemands > 0 ? (deliveredDemands / totalDemands) * 100 : 0;
+
+  // Get project date information for display
+  const projectStartDate = projectData?.projects && projectData.projects.length > 0 ? formatDate(projectData.projects[0].start_date) : "N/A";
+  const projectEndDate = projectData?.projects && projectData.projects.length > 0 ? formatDate(projectData.projects[0].end_date) : "N/A";
 
   return (
     <main className="container mx-auto p-4">
@@ -381,7 +489,7 @@ export default function ScopePage() {
         </div>
       </div>
       
-      {data?.demands && data.demands.length > 0 ? (
+      {demandsData?.demands && demandsData.demands.length > 0 ? (
         <>
           <div className="grid gap-6 md:grid-cols-3 mb-6">
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -430,7 +538,7 @@ export default function ScopePage() {
               <Line options={chartOptions} data={burnupData} />
             </div>
             <p className="text-xs text-gray-600 mt-3 text-center">
-              Evolução semanal do escopo total e demandas entregues (demandas descartadas não são consideradas)
+              Evolução semanal do escopo total e demandas entregues entre {projectStartDate} e {projectEndDate} (demandas descartadas não são consideradas)
             </p>
           </div>
 
@@ -459,7 +567,7 @@ export default function ScopePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {data.demands.map((demand) => {
+                  {demandsData.demands.map((demand) => {
                     const creationDate = formatDate(demand.commitment_date);
                     const deliveryDate = formatDate(demand.end_date);
                     const isDelivered = demand.end_date !== null;
