@@ -316,15 +316,6 @@ export default function ScopePage() {
         tension: 0.1
       },
       {
-        label: 'Demandas Entregues',
-        data: weeklyData.map(week => week.deliveredDemands),
-        borderColor: 'rgb(16, 185, 129)',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.1
-      },
-      {
         label: 'Progresso Ideal',
         data: weeklyData.map((_, index) => {
           const totalWeeks = weeklyData.length;
@@ -339,6 +330,15 @@ export default function ScopePage() {
         fill: false,
         tension: 0.1,
         pointRadius: 0
+      },
+      {
+        label: 'Demandas Entregues',
+        data: weeklyData.map(week => week.deliveredDemands),
+        borderColor: 'rgb(16, 185, 129)',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.1
       }
     ],
   };
@@ -363,10 +363,12 @@ export default function ScopePage() {
         }
       },
       tooltip: {
+        mode: 'index' as const,
+        intersect: false,
         callbacks: {
           label: function(context: TooltipItem<'line'>) {
             if (typeof context.raw === 'number') {
-              return `${context.dataset.label}: ${context.raw} demandas`;
+              return `${context.dataset.label}: ${context.raw.toFixed(1)} demandas`;
             }
             return '';
           }
@@ -473,6 +475,24 @@ export default function ScopePage() {
   const deliveredDemands = demandsData?.demands.filter(d => d.end_date !== null && d.discarded_at === null).length || 0;
   const completionRate = totalDemands > 0 ? (deliveredDemands / totalDemands) * 100 : 0;
 
+  // Calculate demands needed to reach ideal progress
+  const calculateDemandsNeeded = (): number => {
+    if (weeklyData.length === 0 || currentWeekIndex === -1) return 0;
+    
+    // Get the ideal progress for the current week
+    const totalWeeks = weeklyData.length;
+    const latestScope = weeklyData[weeklyData.length - 1].totalDemands;
+    const idealProgress = (latestScope / totalWeeks) * (currentWeekIndex + 1);
+    
+    // Calculate how many more demands need to be delivered
+    const currentDelivered = weeklyData[currentWeekIndex].deliveredDemands;
+    const demandsNeeded = Math.max(0, Math.ceil(idealProgress - currentDelivered));
+    
+    return demandsNeeded;
+  };
+  
+  const demandsNeeded = calculateDemandsNeeded();
+
   // Get project date information for display
   const projectStartDate = projectData?.projects && projectData.projects.length > 0 ? formatDate(projectData.projects[0].start_date) : "N/A";
   const projectEndDate = projectData?.projects && projectData.projects.length > 0 ? formatDate(projectData.projects[0].end_date) : "N/A";
@@ -534,8 +554,23 @@ export default function ScopePage() {
 
           <div className="mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Evolução do Escopo</h2>
-            <div className="bg-white p-3 rounded-lg h-96">
-              <Line options={chartOptions} data={burnupData} />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="bg-white p-3 rounded-lg h-96 flex-grow">
+                <Line options={chartOptions} data={burnupData} />
+              </div>
+              <div className="md:w-64 p-4 bg-orange-50 border border-orange-200 rounded-lg flex flex-col justify-center">
+                <h3 className="text-lg font-semibold text-orange-800 mb-2">Meta da Semana Atual</h3>
+                <p className="text-orange-600 mb-4">Demandas necessárias para atingir o progresso ideal</p>
+                <div className="flex flex-col items-center bg-white p-4 rounded-lg shadow-sm">
+                  <span className="text-3xl font-bold text-orange-700">{demandsNeeded}</span>
+                  <span className="text-sm text-gray-500 mt-2">demandas pendentes</span>
+                </div>
+                {demandsNeeded === 0 ? (
+                  <p className="text-green-600 text-sm mt-4 text-center">Parabéns! Você está no caminho certo.</p>
+                ) : (
+                  <p className="text-orange-600 text-sm mt-4 text-center">Entregue mais {demandsNeeded} demanda{demandsNeeded !== 1 ? 's' : ''} para alcançar o progresso ideal.</p>
+                )}
+              </div>
             </div>
             <p className="text-xs text-gray-600 mt-3 text-center">
               Evolução semanal do escopo total e demandas entregues entre {projectStartDate} e {projectEndDate} (demandas descartadas não são consideradas)
