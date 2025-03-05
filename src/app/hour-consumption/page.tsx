@@ -13,9 +13,11 @@ import {
   Tooltip, 
   Legend,
   BarElement,
-  TooltipItem
+  TooltipItem,
+  ArcElement
 } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import React from 'react';
 
 ChartJS.register(
   CategoryScale,
@@ -23,6 +25,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend
@@ -42,10 +45,8 @@ interface DemandsResponse {
 }
 
 const DEMANDS_HOURS_QUERY = gql`
-  query HoursConsumptionQuery {
-    demands(
-      where: { project_id: { _eq: 2226 } }
-    ) {
+  query CustomerDemandsQuery {
+    demands(where: {customer_id: {_eq: 285}}) {
       id
       slug
       demand_title
@@ -54,6 +55,26 @@ const DEMANDS_HOURS_QUERY = gql`
       end_date
       effort_upstream
       effort_downstream
+    }
+  }
+`;
+
+interface ContractsResponse {
+  contracts: {
+    id: number;
+    start_date: string;
+    total_hours: number;
+    end_date: string;
+  }[];
+}
+
+const CONTRACTS_QUERY = gql`
+  query ContractsQuery {
+    contracts(where: {customer_id: {_eq: 285}}) {
+      id
+      start_date
+      total_hours
+      end_date
     }
   }
 `;
@@ -67,21 +88,45 @@ interface DemandWithHours {
 }
 
 export default function HourConsumptionPage() {
-  const { loading, error, data } = useQuery<DemandsResponse>(DEMANDS_HOURS_QUERY, {
+  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(DEMANDS_HOURS_QUERY, {
     fetchPolicy: "network-only",
   });
+  
+  const { loading: contractsLoading, error: contractsError, data: contractsData } = useQuery<ContractsResponse>(CONTRACTS_QUERY, {
+    fetchPolicy: "network-only",
+  });
+  
+  const loading = demandsLoading || contractsLoading;
+  const error = demandsError || contractsError;
 
-  // Filter only delivered demands (with end_date)
+  // State for table sorting
+  const [sortField, setSortField] = React.useState<'date' | 'hours'>('date');
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('desc');
+
+  // All customer demands for total hours calculation
+  const allCustomerDemands: DemandWithHours[] = [];
+  
+  // Filter only delivered demands (with end_date) for HpD calculation
   const completedDemands: DemandWithHours[] = [];
   
-  if (data?.demands) {
-    data.demands.forEach(demand => {
+  if (demandsData?.demands) {
+    demandsData.demands.forEach(demand => {
+      // Calculate hours consumed by summing effort_upstream and effort_downstream
+      const effortUpstream = demand.effort_upstream || 0;
+      const effortDownstream = demand.effort_downstream || 0;
+      const hoursConsumed = effortUpstream + effortDownstream;
+      
+      // Add to all customer demands for contract comparison
+      allCustomerDemands.push({
+        id: demand.id,
+        slug: demand.slug,
+        demand_title: demand.demand_title,
+        end_date: demand.end_date,
+        hours_consumed: hoursConsumed
+      });
+      
+      // Add only completed demands for HpD calculation
       if (demand.end_date !== null) {
-        // Calculate hours consumed by summing effort_upstream and effort_downstream
-        const effortUpstream = demand.effort_upstream || 0;
-        const effortDownstream = demand.effort_downstream || 0;
-        const hoursConsumed = effortUpstream + effortDownstream;
-        
         completedDemands.push({
           id: demand.id,
           slug: demand.slug,
@@ -92,6 +137,72 @@ export default function HourConsumptionPage() {
       }
     });
   }
+
+  // Get active contract
+  const activeContract = contractsData?.contracts.find(contract => {
+    const startDate = new Date(contract.start_date);
+    const endDate = new Date(contract.end_date);
+    const now = new Date();
+    return startDate <= now && endDate >= now;
+  });
+
+  // Calculate total hours consumed for all customer demands
+  const totalHoursConsumed = allCustomerDemands.reduce((acc, demand) => acc + demand.hours_consumed, 0);
+  
+  // Calculate contract hours data
+  const contractTotalHours = activeContract?.total_hours || 0;
+  const hoursRemaining = Math.max(0, contractTotalHours - totalHoursConsumed);
+  const hoursUsedPercentage = contractTotalHours > 0 
+    ? Math.min(100, (totalHoursConsumed / contractTotalHours) * 100) 
+    : 0;
+
+  // Format contract dates
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
+  // Prepare contract doughnut chart data
+  const contractChartData = {
+    labels: ['Horas Utilizadas', 'Horas Restantes'],
+    datasets: [
+      {
+        data: [totalHoursConsumed, hoursRemaining],
+        backgroundColor: [
+          'rgba(239, 68, 68, 0.7)',
+          'rgba(59, 130, 246, 0.7)',
+        ],
+        borderColor: [
+          'rgb(239, 68, 68)',
+          'rgb(59, 130, 246)',
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const contractChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: TooltipItem<'doughnut'>) {
+            if (typeof context.raw === 'number') {
+              const value = context.raw;
+              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+              const percentage = Math.round((value / total) * 100);
+              return `${context.label}: ${value.toFixed(2)} horas (${percentage}%)`;
+            }
+            return '';
+          }
+        }
+      }
+    },
+    cutout: '70%',
+  };
 
   // Calculate HpD (Hours per Demand)
   const calculateHpD = () => {
@@ -212,11 +323,6 @@ export default function HourConsumptionPage() {
     }
   };
 
-  // Top demands by hours consumed
-  const topDemandsByHours = [...completedDemands]
-    .sort((a, b) => b.hours_consumed - a.hours_consumed)
-    .slice(0, 5);
-
   if (loading) {
     return (
       <main className="container mx-auto p-4">
@@ -273,21 +379,57 @@ export default function HourConsumptionPage() {
             Ver todas as demandas
           </Link>
           Total entregues: <span className="font-semibold">{completedDemands.length}</span>
+          <span className="ml-4">Total cliente: <span className="font-semibold">{allCustomerDemands.length}</span></span>
         </div>
       </div>
       
       {completedDemands.length > 0 ? (
         <>
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div className="mb-3 md:mb-0">
-                <h2 className="text-lg font-semibold text-blue-800">Estatísticas de Consumo de Horas</h2>
-                <p className="text-blue-600">Baseado em {completedDemands.length} demandas entregues</p>
+          <div className="grid gap-6 md:grid-cols-2 mb-6">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex flex-col md:items-start">
+                <div className="mb-3">
+                  <h2 className="text-lg font-semibold text-blue-800">Estatísticas de Consumo de Horas</h2>
+                  <p className="text-blue-600">Baseado em {completedDemands.length} demandas entregues</p>
+                </div>
+                <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
+                  <span className="text-sm text-gray-500">HpD (Horas por Demanda)</span>
+                  <span className="text-2xl font-bold text-blue-700">{hpd.toFixed(2)} horas</span>
+                  <span className="text-xs text-gray-500 mt-1">Média de horas consumidas por demanda</span>
+                </div>
               </div>
-              <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                <span className="text-sm text-gray-500">HpD (Horas por Demanda)</span>
-                <span className="text-2xl font-bold text-blue-700">{hpd.toFixed(2)} horas</span>
-                <span className="text-xs text-gray-500 mt-1">Média de horas consumidas por demanda</span>
+            </div>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex flex-col">
+                <div className="mb-3">
+                  <h2 className="text-lg font-semibold text-blue-800">Contrato Ativo</h2>
+                  {activeContract ? (
+                    <p className="text-blue-600">
+                      Período: {formatDate(activeContract.start_date)} a {formatDate(activeContract.end_date)}
+                    </p>
+                  ) : (
+                    <p className="text-yellow-600">Nenhum contrato ativo encontrado</p>
+                  )}
+                </div>
+                {activeContract && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
+                      <span className="text-sm text-gray-500">Total de Horas</span>
+                      <span className="text-2xl font-bold text-blue-700">{contractTotalHours}</span>
+                      <span className="text-xs text-gray-500 mt-1">Horas contratadas</span>
+                    </div>
+                    <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
+                      <span className="text-sm text-gray-500">Horas Utilizadas</span>
+                      <span className={`text-2xl font-bold ${hoursUsedPercentage > 90 ? 'text-red-600' : 'text-blue-700'}`}>
+                        {totalHoursConsumed.toFixed(2)} ({hoursUsedPercentage.toFixed(1)}%)
+                      </span>
+                      <span className="text-xs text-gray-500 mt-1">
+                        {hoursRemaining.toFixed(2)} horas restantes
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -303,44 +445,88 @@ export default function HourConsumptionPage() {
               </p>
             </div>
             
-            <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-sm">
-              <h2 className="text-xl font-bold text-blue-900 mb-4">Top 5 Demandas por Consumo de Horas</h2>
-              {topDemandsByHours.length > 0 ? (
-                <div className="space-y-4">
-                  {topDemandsByHours.map((demand) => (
-                    <div key={demand.id} className="bg-white p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                      <h3 className="font-semibold text-blue-800 text-sm mb-1">
-                        {demand.demand_title}
-                      </h3>
-                      <div className="flex justify-between">
-                        <span className="text-xs text-gray-500">ID: {demand.id}</span>
-                        <span className="font-medium text-blue-700">{demand.hours_consumed} horas</span>
-                      </div>
+            {activeContract && (
+              <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-sm">
+                <h2 className="text-xl font-bold text-blue-900 mb-4">Consumo do Contrato</h2>
+                <div className="bg-white p-3 rounded-lg h-80 flex items-center justify-center">
+                  <div className="w-64 h-64 relative">
+                    <Doughnut options={contractChartOptions} data={contractChartData} />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-sm text-gray-500">Utilizado</span>
+                      <span className={`text-2xl font-bold ${hoursUsedPercentage > 90 ? 'text-red-600' : 'text-blue-700'}`}>
+                        {hoursUsedPercentage.toFixed(1)}%
+                      </span>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center p-6 text-gray-500">
-                  Nenhuma demanda com horas registradas
-                </div>
-              )}
-            </div>
+                <p className="text-xs text-blue-700 mt-3 text-center">
+                  {hoursRemaining.toFixed(2)} horas restantes de {contractTotalHours} horas contratadas
+                </p>
+                <p className="text-xs text-gray-600 mt-1 text-center">
+                  Baseado em todas as {allCustomerDemands.length} demandas do cliente
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-sm">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">Todas as Demandas Entregues</h2>
+          <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Todas as Demandas Entregues</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white">
-                <thead className="bg-blue-100">
+                <thead className="bg-gray-100">
                   <tr>
-                    <th className="py-2 px-4 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">Título</th>
-                    <th className="py-2 px-4 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">ID</th>
-                    <th className="py-2 px-4 text-left text-xs font-medium text-blue-900 uppercase tracking-wider">Data Entrega</th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-blue-900 uppercase tracking-wider">Horas Consumidas</th>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Título</th>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ID</th>
+                    <th 
+                      className="py-3 px-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
+                      onClick={() => {
+                        if (sortField === 'date') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortField('date');
+                          setSortDirection('desc');
+                        }
+                      }}
+                    >
+                      Data Entrega
+                      {sortField === 'date' && (
+                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </th>
+                    <th 
+                      className="py-3 px-4 text-right text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
+                      onClick={() => {
+                        if (sortField === 'hours') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortField('hours');
+                          setSortDirection('desc');
+                        }
+                      }}
+                    >
+                      Horas Consumidas
+                      {sortField === 'hours' && (
+                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {completedDemands.map((demand) => {
+                  {[...completedDemands]
+                    .sort((a, b) => {
+                      if (sortField === 'date') {
+                        // Sort by end_date
+                        if (!a.end_date) return 1;
+                        if (!b.end_date) return -1;
+                        const comparison = new Date(b.end_date).getTime() - new Date(a.end_date).getTime();
+                        return sortDirection === 'asc' ? -comparison : comparison;
+                      } else {
+                        // Sort by hours consumed
+                        const comparison = b.hours_consumed - a.hours_consumed;
+                        return sortDirection === 'asc' ? -comparison : comparison;
+                      }
+                    })
+                    .map((demand) => {
                     const endDate = demand.end_date ? new Date(demand.end_date) : null;
                     const formattedDate = endDate 
                       ? `${endDate.getDate().toString().padStart(2, '0')}/${(endDate.getMonth() + 1).toString().padStart(2, '0')}/${endDate.getFullYear()}` 
@@ -348,10 +534,10 @@ export default function HourConsumptionPage() {
                       
                     return (
                       <tr key={demand.id} className="hover:bg-gray-50">
-                        <td className="py-2 px-4 text-sm">{demand.demand_title}</td>
-                        <td className="py-2 px-4 text-sm text-gray-500">{demand.id}</td>
-                        <td className="py-2 px-4 text-sm">{formattedDate}</td>
-                        <td className="py-2 px-4 text-sm text-right font-medium text-blue-700">{demand.hours_consumed} horas</td>
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900">{demand.demand_title}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{demand.id}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{formattedDate}</td>
+                        <td className="py-3 px-4 text-sm text-right font-medium text-blue-700">{demand.hours_consumed.toFixed(2)} horas</td>
                       </tr>
                     );
                   })}
