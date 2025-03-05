@@ -149,12 +149,14 @@ export default function HourConsumptionPage() {
   // Calculate total hours consumed for all customer demands
   const totalHoursConsumed = allCustomerDemands.reduce((acc, demand) => acc + demand.hours_consumed, 0);
   
+  // Calculate HpD (Hours per Demand) for completed demands
+  const totalCompletedDemands = completedDemands.length;
+  const hpd = totalCompletedDemands > 0 ? totalHoursConsumed / totalCompletedDemands : 0;
+  
   // Calculate contract hours data
   const contractTotalHours = activeContract?.total_hours || 0;
-  const hoursRemaining = Math.max(0, contractTotalHours - totalHoursConsumed);
-  const hoursUsedPercentage = contractTotalHours > 0 
-    ? Math.min(100, (totalHoursConsumed / contractTotalHours) * 100) 
-    : 0;
+  const hoursUsedPercentage = contractTotalHours > 0 ? (totalHoursConsumed / contractTotalHours) * 100 : 0;
+  const hoursRemaining = contractTotalHours - totalHoursConsumed > 0 ? contractTotalHours - totalHoursConsumed : 0;
 
   // Format contract dates
   const formatDate = (dateString: string) => {
@@ -203,16 +205,6 @@ export default function HourConsumptionPage() {
     },
     cutout: '70%',
   };
-
-  // Calculate HpD (Hours per Demand)
-  const calculateHpD = () => {
-    if (completedDemands.length === 0) return 0;
-    
-    const totalHours = completedDemands.reduce((acc, demand) => acc + demand.hours_consumed, 0);
-    return totalHours / completedDemands.length;
-  };
-
-  const hpd = calculateHpD();
 
   // Group demands by month for chart
   const groupDemandsByMonth = () => {
@@ -378,65 +370,57 @@ export default function HourConsumptionPage() {
           <Link href="/demands" className="text-blue-600 hover:underline mr-4">
             Ver todas as demandas
           </Link>
-          Total entregues: <span className="font-semibold">{completedDemands.length}</span>
-          <span className="ml-4">Total cliente: <span className="font-semibold">{allCustomerDemands.length}</span></span>
+          Total: <span className="font-semibold">{allCustomerDemands.length}</span>
         </div>
       </div>
       
-      {completedDemands.length > 0 ? (
+      {allCustomerDemands.length > 0 ? (
         <>
-          <div className="grid gap-6 md:grid-cols-2 mb-6">
+          <div className="grid gap-6 md:grid-cols-3 mb-6">
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex flex-col md:items-start">
+              <div className="flex flex-col">
                 <div className="mb-3">
-                  <h2 className="text-lg font-semibold text-blue-800">Estatísticas de Consumo de Horas</h2>
-                  <p className="text-blue-600">Baseado em {completedDemands.length} demandas entregues</p>
+                  <h2 className="text-lg font-semibold text-blue-800">Consumo Total de Horas</h2>
+                  <p className="text-blue-600">Todas as demandas do produto (Cliente ID: 285)</p>
                 </div>
                 <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                  <span className="text-sm text-gray-500">HpD (Horas por Demanda)</span>
-                  <span className="text-2xl font-bold text-blue-700">{hpd.toFixed(2)} horas</span>
-                  <span className="text-xs text-gray-500 mt-1">Média de horas consumidas por demanda</span>
+                  <span className="text-2xl font-bold text-blue-700">{totalHoursConsumed.toFixed(2)}</span>
+                  <span className="text-xs text-gray-500 mt-1">horas</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
               <div className="flex flex-col">
                 <div className="mb-3">
-                  <h2 className="text-lg font-semibold text-blue-800">Contrato Ativo</h2>
-                  {activeContract ? (
-                    <p className="text-blue-600">
-                      Período: {formatDate(activeContract.start_date)} a {formatDate(activeContract.end_date)}
-                    </p>
-                  ) : (
-                    <p className="text-yellow-600">Nenhum contrato ativo encontrado</p>
-                  )}
+                  <h2 className="text-lg font-semibold text-purple-800">HpD (Horas por Demanda)</h2>
+                  <p className="text-purple-600">Média de horas consumidas por demanda</p>
                 </div>
-                {activeContract && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                      <span className="text-sm text-gray-500">Total de Horas</span>
-                      <span className="text-2xl font-bold text-blue-700">{contractTotalHours}</span>
-                      <span className="text-xs text-gray-500 mt-1">Horas contratadas</span>
-                    </div>
-                    <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                      <span className="text-sm text-gray-500">Horas Utilizadas</span>
-                      <span className={`text-2xl font-bold ${hoursUsedPercentage > 90 ? 'text-red-600' : 'text-blue-700'}`}>
-                        {totalHoursConsumed.toFixed(2)} ({hoursUsedPercentage.toFixed(1)}%)
-                      </span>
-                      <span className="text-xs text-gray-500 mt-1">
-                        {hoursRemaining.toFixed(2)} horas restantes
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
+                  <span className="text-2xl font-bold text-purple-700">{hpd.toFixed(2)}</span>
+                  <span className="text-xs text-gray-500 mt-1">horas/demanda</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex flex-col">
+                <div className="mb-3">
+                  <h2 className="text-lg font-semibold text-green-800">Horas Disponíveis no Contrato</h2>
+                  <p className="text-green-600">Contrato ativo: {activeContract ? formatDate(activeContract.start_date) + ' a ' + formatDate(activeContract.end_date) : 'Nenhum'}</p>
+                </div>
+                <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
+                  <span className="text-2xl font-bold text-green-700">{contractTotalHours}</span>
+                  <span className="text-xs text-gray-500 mt-1">horas</span>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 mb-8">
-            <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-sm">
-              <h2 className="text-xl font-bold text-blue-900 mb-4">Evolução de HpD por Mês</h2>
+            <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Consumo de Horas por Mês</h2>
+              <p className="text-sm text-gray-600 mb-4">Todas as demandas, independente do projeto</p>
               <div className="bg-white p-3 rounded-lg h-80">
                 <Bar options={chartOptions} data={chartData} />
               </div>

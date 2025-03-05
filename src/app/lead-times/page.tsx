@@ -322,7 +322,7 @@ export default function LeadTimesPage() {
     return (
       <main className="container mx-auto p-4">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Lead Times de Demandas</h1>
+          <h1 className="text-3xl font-bold">Lead Times</h1>
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-24"></div>
           </div>
@@ -343,7 +343,7 @@ export default function LeadTimesPage() {
   if (error) {
     return (
       <main className="container mx-auto p-4">
-        <h1 className="mb-8 text-3xl font-bold">Lead Times de Demandas</h1>
+        <h1 className="mb-8 text-3xl font-bold">Lead Times</h1>
         <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center mb-3">
             <svg className="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -368,79 +368,116 @@ export default function LeadTimesPage() {
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Lead Times de Demandas</h1>
+        <h1 className="text-3xl font-bold">Lead Times</h1>
         <div className="text-gray-500">
           <Link href="/demands" className="text-blue-600 hover:underline mr-4">
             Ver todas as demandas
           </Link>
-          Total válidas: <span className="font-semibold">{demandsWithLeadTimes.length}</span>
+          Total entregues: <span className="font-semibold">{demandsWithLeadTimes.length}</span>
         </div>
       </div>
       
       {demandsWithLeadTimes.length > 0 ? (
         <>
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div className="mb-3 md:mb-0">
-                <h2 className="text-lg font-semibold text-blue-800">Estatísticas de Lead Time</h2>
-                <p className="text-blue-600">Baseado em {demandsWithLeadTimes.length} demandas concluídas</p>
+          <div className="grid gap-6 md:grid-cols-3 mb-6">
+            <Card className="p-4 bg-green-50 border border-green-200">
+              <div className="flex flex-col">
+                <div className="mb-3">
+                  <h2 className="text-lg font-semibold text-green-800">Lead Time P80</h2>
+                  <p className="text-green-600">Baseado em {demandsWithLeadTimes.length} demandas do projeto</p>
+                </div>
+                <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
+                  <span className="text-2xl font-bold text-green-700">{p80LeadTime}</span>
+                  <span className="text-xs text-gray-500 mt-1">dias</span>
+                </div>
               </div>
-              <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                <span className="text-sm text-gray-500">P80 de Lead Time</span>
-                <span className="text-2xl font-bold text-blue-700">{p80LeadTime} dias</span>
-                <span className="text-xs text-gray-500 mt-1">80% das demandas abaixo deste valor</span>
-              </div>
-            </div>
+            </Card>
           </div>
 
-          <div className="mb-8 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-sm">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">Evolução Semanal do P80</h2>
-            <div className="h-80 bg-white p-3 rounded-lg">
-              <Line options={chartOptions} data={chartData} />
-            </div>
-            <p className="text-xs text-blue-700 mt-3 text-center">
-              Cada ponto representa o P80 calculado com todas as demandas concluídas até o domingo daquela semana
-            </p>
-          </div>
-
-          {weekKeys.length > 0 ? (
-            <div className="space-y-8">
-              {weekKeys.map(weekKey => {
-                const startOfWeek = new Date(weekKey);
-                const weekRange = formatWeekRange(startOfWeek);
-                const weekDemands = groupedDemands[weekKey];
-                
-                return (
-                  <div key={weekKey} className="mb-8">
-                    <div className="flex items-center mb-4 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
-                      <h3 className="text-xl font-bold text-blue-900">Semana: {weekRange}</h3>
-                      <span className="ml-3 bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">
-                        {weekDemands.length} demanda{weekDemands.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {weekDemands.map((demand) => (
-                        <DemandCard
-                          key={demand.id}
-                          demand={demand}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200">
-              <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h2 className="text-xl font-semibold mb-2">Nenhuma demanda com lead time válido</h2>
-              <p className="text-gray-500">
-                Não foram encontradas demandas com datas de início e fim válidas, ou todas foram descartadas.
+          <div className="grid gap-6 md:grid-cols-1 mb-8">
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Evolução do Lead Time P80</h2>
+              <p className="text-sm text-gray-600 mb-4">Dados do projeto ID: 2226</p>
+              <div className="h-80 bg-white p-3 rounded-lg">
+                <Line options={chartOptions} data={chartData} />
+              </div>
+              <p className="text-xs text-gray-600 mt-3 text-center">
+                Cada ponto representa o P80 calculado com todas as demandas concluídas até o domingo daquela semana
               </p>
             </div>
-          )}
+          </div>
+
+          <div className="mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Demandas Entregues</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Título</th>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Data Início</th>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Data Entrega</th>
+                    <th className="py-3 px-4 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Lead Time</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {demandsWithLeadTimes
+                    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())
+                    .map((demand) => (
+                      <tr key={demand.id} className="hover:bg-gray-50">
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900">{demand.demand_title}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{new Date(demand.commitment_date).toLocaleDateString()}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{new Date(demand.end_date).toLocaleDateString()}</td>
+                        <td className="py-3 px-4 text-sm text-right font-medium text-blue-700">{demand.lead_time_days} dias</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Lead Time por Semana</h2>
+            <div className="overflow-x-auto">
+              {weekKeys.length > 0 ? (
+                <div className="space-y-8">
+                  {weekKeys.map(weekKey => {
+                    const startOfWeek = new Date(weekKey);
+                    const weekRange = formatWeekRange(startOfWeek);
+                    const weekDemands = groupedDemands[weekKey];
+                    
+                    return (
+                      <div key={weekKey} className="mb-8">
+                        <div className="flex items-center mb-4 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                          <h3 className="text-xl font-bold text-blue-900">Semana: {weekRange}</h3>
+                          <span className="ml-3 bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">
+                            {weekDemands.length} demanda{weekDemands.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {weekDemands.map((demand) => (
+                            <DemandCard
+                              key={demand.id}
+                              demand={demand}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200">
+                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h2 className="text-xl font-semibold mb-2">Nenhuma demanda com lead time válido</h2>
+                  <p className="text-gray-500">
+                    Não foram encontradas demandas com datas de início e fim válidas, ou todas foram descartadas.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </>
       ) : (
         <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200">
