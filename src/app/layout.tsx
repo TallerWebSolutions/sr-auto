@@ -33,6 +33,9 @@ export default function RootLayout({
             <Link href="/hour-consumption" className="hover:text-gray-300">
               Consumo de Horas
             </Link>
+            <Link href="/escopo" className="hover:text-gray-300">
+              Escopo
+            </Link>
           </div>
         </nav>
         <ApolloWrapper>{children}</ApolloWrapper>
