@@ -16,7 +16,8 @@ import {
   TooltipItem,
   ArcElement
 } from 'chart.js';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import annotationPlugin from 'chartjs-plugin-annotation';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import React from 'react';
 
 ChartJS.register(
@@ -28,7 +29,8 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  annotationPlugin
 );
 
 interface DemandsResponse {
@@ -68,6 +70,24 @@ interface ContractsResponse {
   }[];
 }
 
+interface ProjectResponse {
+  projects: {
+    id: string;
+    start_date: string;
+    end_date: string;
+  }[];
+}
+
+const PROJECTS_QUERY = gql`
+  query ProjectsQuery {
+    projects(where: {id: {_eq: "2226"}}) {
+      id
+      start_date
+      end_date
+    }
+  }
+`;
+
 const CONTRACTS_QUERY = gql`
   query ContractsQuery {
     contracts(where: {customer_id: {_eq: 285}}) {
@@ -85,6 +105,13 @@ interface DemandWithHours {
   demand_title: string;
   end_date: string | null;
   hours_consumed: number;
+  commitment_date: string | null;
+}
+
+interface WeeklyHoursData {
+  weekLabel: string;
+  totalHours: number;
+  consumedHours: number;
 }
 
 export default function HourConsumptionPage() {
@@ -96,12 +123,45 @@ export default function HourConsumptionPage() {
     fetchPolicy: "network-only",
   });
   
-  const loading = demandsLoading || contractsLoading;
-  const error = demandsError || contractsError;
+  const { loading: projectsLoading, error: projectsError, data: projectsData } = useQuery<ProjectResponse>(PROJECTS_QUERY, {
+    fetchPolicy: "network-only",
+  });
+  
+  const loading = demandsLoading || contractsLoading || projectsLoading;
+  const error = demandsError || contractsError || projectsError;
 
   // State for table sorting
   const [sortField, setSortField] = React.useState<'date' | 'hours'>('date');
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('desc');
+
+  // Get week number and year from date
+  const getWeekNumber = (date: Date): [number, number] => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+    return [weekNumber, date.getFullYear()];
+  };
+
+  // Format week label to show the Sunday date
+  const formatWeekLabel = (weekNumber: number, year: number): string => {
+    // Get the first day of the year
+    const firstDayOfYear = new Date(year, 0, 1);
+    
+    // Calculate the first Sunday of the year
+    const dayOfWeek = firstDayOfYear.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysUntilFirstSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    const firstSunday = new Date(year, 0, 1 + daysUntilFirstSunday);
+    
+    // Calculate the Sunday of the given week
+    const sundayOfWeek = new Date(firstSunday);
+    sundayOfWeek.setDate(firstSunday.getDate() + (weekNumber - 1) * 7);
+    
+    // Format the date as DD/MM
+    const day = sundayOfWeek.getDate().toString().padStart(2, '0');
+    const month = (sundayOfWeek.getMonth() + 1).toString().padStart(2, '0');
+    
+    return `${day}/${month}`;
+  };
 
   // All customer demands for total hours calculation
   const allCustomerDemands: DemandWithHours[] = [];
@@ -122,7 +182,8 @@ export default function HourConsumptionPage() {
         slug: demand.slug,
         demand_title: demand.demand_title,
         end_date: demand.end_date,
-        hours_consumed: hoursConsumed
+        hours_consumed: hoursConsumed,
+        commitment_date: demand.commitment_date
       });
       
       // Add only completed demands for HpD calculation
@@ -132,7 +193,8 @@ export default function HourConsumptionPage() {
           slug: demand.slug,
           demand_title: demand.demand_title,
           end_date: demand.end_date,
-          hours_consumed: hoursConsumed
+          hours_consumed: hoursConsumed,
+          commitment_date: demand.commitment_date
         });
       }
     });
@@ -162,6 +224,302 @@ export default function HourConsumptionPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
+  // Process demands data to get weekly burnup data for hours
+  const processWeeklyHoursData = (): WeeklyHoursData[] => {
+    if (!demandsData?.demands || demandsData.demands.length === 0 || !activeContract) {
+      return [];
+    }
+
+    let earliestDate: Date | null = null;
+    let latestDate: Date | null = null;
+    const currentDate = new Date();
+
+    if (projectsData?.projects && projectsData.projects.length > 0) {
+      const project = projectsData.projects[0];
+      if (project.start_date) {
+        earliestDate = new Date(project.start_date);
+      }
+      if (project.end_date) {
+        latestDate = new Date(project.end_date);
+      }
+    }
+
+    if (!earliestDate || !latestDate) {
+      earliestDate = new Date(activeContract.start_date);
+      latestDate = new Date(activeContract.end_date);
+    }
+
+    // 1. Gerar todas as semanas entre a data de início e fim
+    const weeks: WeeklyHoursData[] = [];
+    const currentWeek = getWeekNumber(earliestDate);
+    const endWeek = getWeekNumber(latestDate);
+    
+    let currentYear = currentWeek[1];
+    let weekNum = currentWeek[0];
+    
+    while (currentYear < endWeek[1] || (currentYear === endWeek[1] && weekNum <= endWeek[0])) {
+      weeks.push({
+        weekLabel: formatWeekLabel(weekNum, currentYear),
+        totalHours: activeContract.total_hours,
+        consumedHours: 0
+      });
+      
+      weekNum++;
+      if (weekNum > 52) {
+        weekNum = 1;
+        currentYear++;
+      }
+    }
+
+    // 2. Calcular as horas consumidas por semana para cada demanda
+    const weeklyHours: { [weekLabel: string]: number } = {};
+    
+    // Inicializar todas as semanas com zero horas
+    weeks.forEach(week => {
+      weeklyHours[week.weekLabel] = 0;
+    });
+    
+    // Distribuir as horas de cada demanda na semana correspondente
+    demandsData.demands.forEach(demand => {
+      // Calcular horas consumidas para esta demanda
+      const effortUpstream = demand.effort_upstream || 0;
+      const effortDownstream = demand.effort_downstream || 0;
+      const hoursConsumed = effortUpstream + effortDownstream;
+      
+      if (hoursConsumed <= 0) return; // Pular demandas sem horas
+      
+      // Determinar a semana para esta demanda
+      let demandDate;
+      if (demand.end_date) {
+        // Se a demanda foi concluída, usar a data de conclusão
+        demandDate = new Date(demand.end_date);
+      } else if (demand.commitment_date) {
+        // Se não foi concluída mas tem data de compromisso, usar essa data
+        demandDate = new Date(demand.commitment_date);
+      } else {
+        // Se não tem nenhuma data, usar a data atual
+        demandDate = currentDate;
+      }
+      
+      // Só considerar demandas até a data atual
+      if (demandDate > currentDate) {
+        demandDate = currentDate;
+      }
+      
+      // Obter a semana para esta data
+      const [weekNum, year] = getWeekNumber(demandDate);
+      const weekLabel = formatWeekLabel(weekNum, year);
+      
+      // Adicionar as horas à semana correspondente se ela existir no nosso período
+      if (weeklyHours[weekLabel] !== undefined) {
+        weeklyHours[weekLabel] += hoursConsumed;
+      } else {
+        // Se a semana não existe no nosso período (é anterior ao início do projeto),
+        // adicionar as horas à primeira semana
+        if (weeks.length > 0) {
+          weeklyHours[weeks[0].weekLabel] += hoursConsumed;
+        }
+      }
+    });
+
+    // 3. Calcular o acumulado de horas por semana
+    let accumulatedHours = 0;
+    weeks.forEach(week => {
+      accumulatedHours += weeklyHours[week.weekLabel];
+      week.consumedHours = accumulatedHours;
+    });
+
+    // 4. Garantir que o valor final acumulado seja exatamente igual ao totalHoursConsumed
+    if (weeks.length > 0) {
+      // Ajustar o valor final para garantir que seja exatamente igual ao totalHoursConsumed
+      const lastWeek = weeks[weeks.length - 1];
+      const difference = totalHoursConsumed - lastWeek.consumedHours;
+      
+      if (Math.abs(difference) > 0.01) { // Usar uma pequena margem para evitar problemas de arredondamento
+        // Distribuir a diferença proporcionalmente entre todas as semanas
+        const adjustmentPerWeek = difference / weeks.length;
+        
+        let runningTotal = 0;
+        for (let i = 0; i < weeks.length; i++) {
+          runningTotal += weeklyHours[weeks[i].weekLabel];
+          // Ajustar o valor acumulado para cada semana
+          weeks[i].consumedHours = runningTotal + (adjustmentPerWeek * (i + 1));
+        }
+        
+        // Garantir que o último valor seja exatamente igual ao totalHoursConsumed
+        weeks[weeks.length - 1].consumedHours = totalHoursConsumed;
+      }
+    }
+
+    return weeks;
+  };
+
+  const weeklyHoursData = processWeeklyHoursData();
+
+  // Find current week index for highlighting
+  const getCurrentWeekIndex = (): number => {
+    const currentDate = new Date();
+    const [currentWeekNum, currentYear] = getWeekNumber(currentDate);
+    const currentWeekLabel = formatWeekLabel(currentWeekNum, currentYear);
+    
+    // Find the closest week if exact match not found
+    if (weeklyHoursData.length === 0) return -1;
+    
+    const exactMatch = weeklyHoursData.findIndex(week => week.weekLabel === currentWeekLabel);
+    if (exactMatch !== -1) return exactMatch;
+    
+    // If no exact match, find the closest week before current date
+    const currentDay = currentDate.getDate();
+    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+    
+    for (let i = 0; i < weeklyHoursData.length; i++) {
+      const parts = weeklyHoursData[i].weekLabel.split('/');
+      const weekDay = parseInt(parts[0]);
+      const weekMonth = parseInt(parts[1]);
+      
+      // If this week is in a future month or the same month but future day
+      if (weekMonth > currentMonth || (weekMonth === currentMonth && weekDay > currentDay)) {
+        // Return the previous week, or 0 if this is the first week
+        return i > 0 ? i - 1 : 0;
+      }
+    }
+    
+    // If we get here, all weeks are before current date, return the last week
+    return weeklyHoursData.length - 1;
+  };
+  
+  const currentWeekIndex = getCurrentWeekIndex();
+
+  // Calculate hours needed to reach ideal progress
+  const calculateHoursNeeded = (): number => {
+    if (weeklyHoursData.length === 0 || currentWeekIndex === -1) return 0;
+    
+    // Get the ideal progress for the current week
+    const totalWeeks = weeklyHoursData.length;
+    const contractHours = activeContract?.total_hours || 0;
+    const idealProgress = (contractHours / totalWeeks) * (currentWeekIndex + 1);
+    
+    // Retornar o valor ideal para a semana atual
+    return Math.ceil(idealProgress);
+  };
+  
+  const hoursNeeded = calculateHoursNeeded();
+
+  // Prepare chart data for hours burnup
+  const hoursBurnupData = {
+    labels: weeklyHoursData.map(week => week.weekLabel),
+    datasets: [
+      {
+        label: 'Escopo Total (Horas Contratadas)',
+        data: weeklyHoursData.map(week => week.totalHours),
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.1
+      },
+      {
+        label: 'Progresso Ideal',
+        data: weeklyHoursData.map((_, index) => {
+          const totalWeeks = weeklyHoursData.length;
+          if (totalWeeks === 0) return 0;
+          
+          const contractHours = activeContract?.total_hours || 0;
+          return (contractHours / totalWeeks) * (index + 1);
+        }),
+        borderColor: 'rgb(234, 88, 12)',
+        borderWidth: 2,
+        borderDash: [5, 5],
+        fill: false,
+        tension: 0.1,
+        pointRadius: 0
+      }
+    ],
+  };
+
+  const hoursBurnupOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Escopo e Progresso Ideal do Produto',
+        color: '#1e3a8a',
+        font: {
+          size: 16,
+          weight: 'bold' as const
+        },
+        padding: {
+          top: 10,
+          bottom: 15
+        }
+      },
+      tooltip: {
+        mode: 'index' as const,
+        intersect: false,
+        callbacks: {
+          label: function(context: TooltipItem<'line'>) {
+            if (typeof context.raw === 'number') {
+              return `${context.dataset.label}: ${context.raw.toFixed(1)} horas`;
+            }
+            return '';
+          }
+        }
+      },
+      annotation: {
+        annotations: {
+          currentWeekLine: {
+            type: 'line' as const,
+            xMin: currentWeekIndex,
+            xMax: currentWeekIndex,
+            borderColor: 'rgba(255, 99, 132, 0.9)',
+            borderWidth: 3,
+            borderDash: [6, 6],
+            label: {
+              display: true,
+              content: 'Semana Atual',
+              position: 'start' as const,
+              backgroundColor: 'rgba(255, 99, 132, 0.9)',
+              color: 'white',
+              font: {
+                weight: 'bold' as const,
+                size: 12
+              },
+              padding: 6
+            }
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Horas',
+          color: '#4b5563',
+          font: {
+            size: 12,
+            weight: 'bold' as const
+          }
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Data (Domingo de cada semana)',
+          color: '#4b5563',
+          font: {
+            size: 12,
+            weight: 'bold' as const
+          }
+        }
+      }
+    }
   };
 
   // Prepare contract doughnut chart data
@@ -528,6 +886,31 @@ export default function HourConsumptionPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Escopo e Progresso Ideal do Produto</h2>
+            <p className="text-sm text-gray-600 mb-4">Este gráfico mostra o escopo total (horas contratadas) e a linha de progresso ideal ao longo do tempo</p>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="bg-white p-3 rounded-lg h-80 flex-grow">
+                <Line options={hoursBurnupOptions} data={hoursBurnupData} />
+              </div>
+              <div className="md:w-64 p-4 bg-orange-50 border border-orange-200 rounded-lg flex flex-col justify-center">
+                <h3 className="text-lg font-semibold text-orange-800 mb-2">Meta da Semana Atual</h3>
+                <p className="text-orange-600 mb-4">Horas necessárias segundo o progresso ideal</p>
+                <div className="flex flex-col items-center bg-white p-4 rounded-lg shadow-sm">
+                  <span className="text-3xl font-bold text-orange-700">{hoursNeeded}</span>
+                  <span className="text-sm text-gray-500 mt-2">horas</span>
+                </div>
+                <p className="text-orange-600 text-sm mt-4 text-center">
+                  Baseado na distribuição ideal de {activeContract?.total_hours || 0} horas ao longo de {weeklyHoursData.length} semanas.
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-600 mt-3 text-center">
+              Escopo e progresso ideal entre {projectsData?.projects && projectsData.projects.length > 0 ? formatDate(projectsData.projects[0].start_date) : (activeContract ? formatDate(activeContract.start_date) : 'N/A')} e {projectsData?.projects && projectsData.projects.length > 0 ? formatDate(projectsData.projects[0].end_date) : (activeContract ? formatDate(activeContract.end_date) : 'N/A')}
+              <br />A linha tracejada vermelha indica a semana atual
+            </p>
           </div>
         </>
       ) : (
