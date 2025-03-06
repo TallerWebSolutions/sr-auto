@@ -68,6 +68,7 @@ export function HoursBurnupChart({
 
   const hoursBurnupOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top' as const,
@@ -153,19 +154,31 @@ export function HoursBurnupChart({
     <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm mb-8">
       <h2 className="text-xl font-bold text-gray-900 mb-4">Escopo e Progresso Ideal do Produto</h2>
       <p className="text-sm text-gray-600 mb-4">Este gráfico mostra o escopo total (horas contratadas), horas consumidas e a linha de progresso ideal ao longo do tempo</p>
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="bg-white p-3 rounded-lg h-80 flex-grow">
-          <Line options={hoursBurnupOptions} data={hoursBurnupData} />
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="bg-white p-3 rounded-lg flex-grow">
+          <div className="h-80 lg:h-[28rem] w-full">
+            <Line options={hoursBurnupOptions} data={hoursBurnupData} />
+          </div>
         </div>
-        <div className="md:w-64 p-4 bg-orange-50 border border-orange-200 rounded-lg flex flex-col justify-center">
+        <div className="lg:w-80 p-4 bg-orange-50 border border-orange-200 rounded-lg flex flex-col justify-center">
           <h3 className="text-lg font-semibold text-orange-800 mb-2">Meta da Semana Atual</h3>
           <p className="text-orange-600 mb-4">Horas necessárias segundo o progresso ideal</p>
           <div className="flex flex-col items-center bg-white p-4 rounded-lg shadow-sm">
-            <span className="text-3xl font-bold text-orange-700">{hoursNeeded}</span>
+            <span className={`text-3xl font-bold ${hoursNeeded < 0 ? 'text-red-600' : 'text-orange-700'}`}>
+              {Math.abs(hoursNeeded)}
+            </span>
             <span className="text-sm text-gray-500 mt-2">horas</span>
+            {hoursNeeded < 0 && (
+              <div className="mt-2 text-red-600 text-sm font-medium">
+                Excedido!
+              </div>
+            )}
           </div>
           <p className="text-orange-600 text-sm mt-4 text-center">
-            Baseado na distribuição ideal de {contractTotalHours} horas ao longo de {weeklyHoursData.length} semanas.
+            {hoursNeeded < 0 
+              ? `Excedeu em ${Math.abs(hoursNeeded)} horas o progresso ideal.` 
+              : `Baseado na distribuição ideal de ${contractTotalHours} horas ao longo de ${weeklyHoursData.length} semanas.`
+            }
           </p>
         </div>
       </div>
