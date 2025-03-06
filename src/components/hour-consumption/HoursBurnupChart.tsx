@@ -13,10 +13,8 @@ interface HoursBurnupChartProps {
   currentWeekIndex: number;
   hoursNeeded: number;
   contractTotalHours: number;
-  projectStartDate?: string;
-  projectEndDate?: string;
-  contractStartDate?: string;
-  contractEndDate?: string;
+  startDate?: string;
+  endDate?: string;
   formatDate: (dateString: string) => string;
 }
 
@@ -25,10 +23,8 @@ export function HoursBurnupChart({
   currentWeekIndex,
   hoursNeeded,
   contractTotalHours,
-  projectStartDate,
-  projectEndDate,
-  contractStartDate,
-  contractEndDate,
+  startDate,
+  endDate,
   formatDate
 }: HoursBurnupChartProps) {
   const hoursBurnupData = {
@@ -39,6 +35,15 @@ export function HoursBurnupChart({
         data: weeklyHoursData.map(week => week.totalHours),
         borderColor: 'rgb(59, 130, 246)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.1
+      },
+      {
+        label: 'Horas Consumidas',
+        data: weeklyHoursData.map(week => week.consumedHours),
+        borderColor: 'rgb(34, 197, 94)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
         borderWidth: 2,
         fill: true,
         tension: 0.1
@@ -144,13 +149,10 @@ export function HoursBurnupChart({
     }
   };
 
-  const startDate = projectStartDate || contractStartDate;
-  const endDate = projectEndDate || contractEndDate;
-
   return (
-    <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm mb-8">
       <h2 className="text-xl font-bold text-gray-900 mb-4">Escopo e Progresso Ideal do Produto</h2>
-      <p className="text-sm text-gray-600 mb-4">Este gráfico mostra o escopo total (horas contratadas) e a linha de progresso ideal ao longo do tempo</p>
+      <p className="text-sm text-gray-600 mb-4">Este gráfico mostra o escopo total (horas contratadas), horas consumidas e a linha de progresso ideal ao longo do tempo</p>
       <div className="flex flex-col md:flex-row gap-4">
         <div className="bg-white p-3 rounded-lg h-80 flex-grow">
           <Line options={hoursBurnupOptions} data={hoursBurnupData} />

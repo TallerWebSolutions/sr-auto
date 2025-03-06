@@ -20,7 +20,6 @@ import {
   HourConsumptionSummary,
   ContractDoughnutChart,
   MonthlyHoursBarChart,
-  DemandsTable,
   HoursBurnupChart,
   LoadingState,
   ErrorState,
@@ -60,7 +59,7 @@ interface DemandsResponse {
   }[];
 }
 
-const DEMANDS_HOURS_QUERY = gql`
+const CUSTOMER_DEMANDS_HOURS_QUERY = gql`
   query CustomerDemandsQuery {
     demands(where: {customer_id: {_eq: 285}}) {
       id
@@ -84,24 +83,6 @@ interface ContractsResponse {
   }[];
 }
 
-interface ProjectResponse {
-  projects: {
-    id: string;
-    start_date: string;
-    end_date: string;
-  }[];
-}
-
-const PROJECTS_QUERY = gql`
-  query ProjectsQuery {
-    projects(where: {id: {_eq: "2226"}}) {
-      id
-      start_date
-      end_date
-    }
-  }
-`;
-
 const CONTRACTS_QUERY = gql`
   query ContractsQuery {
     contracts(where: {customer_id: {_eq: 285}}) {
@@ -114,7 +95,7 @@ const CONTRACTS_QUERY = gql`
 `;
 
 export default function HourConsumptionPage() {
-  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(DEMANDS_HOURS_QUERY, {
+  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(CUSTOMER_DEMANDS_HOURS_QUERY, {
     fetchPolicy: "network-only",
   });
   
@@ -122,12 +103,8 @@ export default function HourConsumptionPage() {
     fetchPolicy: "network-only",
   });
   
-  const { loading: projectsLoading, error: projectsError, data: projectsData } = useQuery<ProjectResponse>(PROJECTS_QUERY, {
-    fetchPolicy: "network-only",
-  });
-  
-  const loading = demandsLoading || contractsLoading || projectsLoading;
-  const error = demandsError || contractsError || projectsError;
+  const loading = demandsLoading || contractsLoading;
+  const error = demandsError || contractsError;
 
   // Process data
   const { allCustomerDemands, completedDemands, totalHoursConsumed, hpd } = processDemandsData(demandsData);
@@ -141,7 +118,8 @@ export default function HourConsumptionPage() {
   const hoursRemaining = contractTotalHours - totalHoursConsumed > 0 ? contractTotalHours - totalHoursConsumed : 0;
 
   // Process weekly hours data for burnup chart
-  const weeklyHoursData = processWeeklyHoursData(demandsData, activeContract, projectsData, totalHoursConsumed);
+  const weeklyHoursData = processWeeklyHoursData(demandsData, activeContract);
+  console.log(weeklyHoursData);
   
   // Find current week index for highlighting
   const currentWeekIndex = getCurrentWeekIndex(weeklyHoursData);
@@ -183,6 +161,16 @@ export default function HourConsumptionPage() {
             formatDate={formatDate}
           />
 
+          <HoursBurnupChart 
+            weeklyHoursData={weeklyHoursData}
+            currentWeekIndex={currentWeekIndex}
+            hoursNeeded={hoursNeeded}
+            contractTotalHours={contractTotalHours}
+            startDate={activeContract?.start_date}
+            endDate={activeContract?.end_date}
+            formatDate={formatDate}
+          />
+
           <div className="grid gap-6 md:grid-cols-2 mb-8">
             <MonthlyHoursBarChart chartData={monthlyChartData} />
             
@@ -196,20 +184,6 @@ export default function HourConsumptionPage() {
               />
             )}
           </div>
-
-          <DemandsTable completedDemands={completedDemands} />
-
-          <HoursBurnupChart 
-            weeklyHoursData={weeklyHoursData}
-            currentWeekIndex={currentWeekIndex}
-            hoursNeeded={hoursNeeded}
-            contractTotalHours={contractTotalHours}
-            projectStartDate={projectsData?.projects?.[0]?.start_date}
-            projectEndDate={projectsData?.projects?.[0]?.end_date}
-            contractStartDate={activeContract?.start_date}
-            contractEndDate={activeContract?.end_date}
-            formatDate={formatDate}
-          />
         </>
       ) : (
         <EmptyState />

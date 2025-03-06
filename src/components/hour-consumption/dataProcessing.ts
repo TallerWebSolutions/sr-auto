@@ -22,14 +22,6 @@ interface ContractsData {
   }[];
 }
 
-interface ProjectsData {
-  projects: {
-    id: string;
-    start_date: string;
-    end_date: string;
-  }[];
-}
-
 // Process demands data to get all customer demands and completed demands
 export function processDemandsData(demandsData: DemandsData | undefined): {
   allCustomerDemands: DemandWithHours[];
@@ -100,31 +92,14 @@ export function getActiveContract(contractsData: ContractsData | undefined) {
 export function processWeeklyHoursData(
   demandsData: DemandsData | undefined,
   activeContract: { start_date: string; end_date: string; total_hours: number } | undefined,
-  projectsData: ProjectsData | undefined,
-  totalHoursConsumed: number
 ): WeeklyHoursData[] {
   if (!demandsData?.demands || demandsData.demands.length === 0 || !activeContract) {
     return [];
   }
 
-  let earliestDate: Date | null = null;
-  let latestDate: Date | null = null;
   const currentDate = new Date();
-
-  if (projectsData?.projects && projectsData.projects.length > 0) {
-    const project = projectsData.projects[0];
-    if (project.start_date) {
-      earliestDate = new Date(project.start_date);
-    }
-    if (project.end_date) {
-      latestDate = new Date(project.end_date);
-    }
-  }
-
-  if (!earliestDate || !latestDate) {
-    earliestDate = new Date(activeContract.start_date);
-    latestDate = new Date(activeContract.end_date);
-  }
+  const earliestDate = new Date(activeContract.start_date);
+  const latestDate = new Date(activeContract.end_date);
 
   // 1. Generate all weeks between start and end dates
   const weeks: WeeklyHoursData[] = [];
@@ -178,11 +153,6 @@ export function processWeeklyHoursData(
       demandDate = currentDate;
     }
     
-    // Only consider demands up to the current date
-    if (demandDate > currentDate) {
-      demandDate = currentDate;
-    }
-    
     // Get the week for this date
     const [weekNum, year] = getWeekNumber(demandDate);
     const weekLabel = formatWeekLabel(weekNum, year);
@@ -205,28 +175,6 @@ export function processWeeklyHoursData(
     accumulatedHours += weeklyHours[week.weekLabel];
     week.consumedHours = accumulatedHours;
   });
-
-  // 4. Ensure the final accumulated value is exactly equal to totalHoursConsumed
-  if (weeks.length > 0) {
-    // Adjust the final value to ensure it's exactly equal to totalHoursConsumed
-    const lastWeek = weeks[weeks.length - 1];
-    const difference = totalHoursConsumed - lastWeek.consumedHours;
-    
-    if (Math.abs(difference) > 0.01) { // Use a small margin to avoid rounding issues
-      // Distribute the difference proportionally across all weeks
-      const adjustmentPerWeek = difference / weeks.length;
-      
-      let runningTotal = 0;
-      for (let i = 0; i < weeks.length; i++) {
-        runningTotal += weeklyHours[weeks[i].weekLabel];
-        // Adjust the accumulated value for each week
-        weeks[i].consumedHours = runningTotal + (adjustmentPerWeek * (i + 1));
-      }
-      
-      // Ensure the last value is exactly equal to totalHoursConsumed
-      weeks[weeks.length - 1].consumedHours = totalHoursConsumed;
-    }
-  }
 
   return weeks;
 }
@@ -271,12 +219,11 @@ export function calculateHoursNeeded(
 ): number {
   if (weeklyHoursData.length === 0 || currentWeekIndex === -1) return 0;
   
-  // Get the ideal progress for the current week
   const totalWeeks = weeklyHoursData.length;
   const idealProgress = (contractTotalHours / totalWeeks) * (currentWeekIndex + 1);
+  const currentConsumedHours = weeklyHoursData[currentWeekIndex].consumedHours;
   
-  // Return the ideal value for the current week
-  return Math.ceil(idealProgress);
+  return Math.ceil(idealProgress - currentConsumedHours);
 }
 
 // Group demands by month for chart
