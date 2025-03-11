@@ -45,6 +45,7 @@ interface ProjectResponse {
     id: string;
     start_date: string;
     end_date: string;
+    initial_scope: number;
   }[];
 }
 
@@ -54,6 +55,7 @@ const PROJECT_QUERY = gql`
       id
       start_date
       end_date
+      initial_scope
     }
   }
 `;
@@ -216,6 +218,12 @@ export default function ScopePage() {
         currentYear++;
       }
     }
+
+    // Add initial scope to all weeks
+    const initialScope = projectData?.projects[0]?.initial_scope || 0;
+    weeks.forEach(week => {
+      week.totalDemands = initialScope;
+    });
 
     // Count demands created and delivered by week
     filteredDemands.forEach(demand => {
@@ -471,7 +479,7 @@ export default function ScopePage() {
   }
 
   // Calculate current metrics
-  const totalDemands = demandsData?.demands.filter(d => d.discarded_at === null).length || 0;
+  const totalDemands = (demandsData?.demands.filter(d => d.discarded_at === null).length || 0) + (projectData?.projects[0]?.initial_scope || 0);
   const deliveredDemands = demandsData?.demands.filter(d => d.end_date !== null && d.discarded_at === null).length || 0;
   const completionRate = totalDemands > 0 ? (deliveredDemands / totalDemands) * 100 : 0;
 
