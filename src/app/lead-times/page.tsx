@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { DemandCard } from "@/components/ui/DemandCard";
 import { useSearchParams } from "next/navigation";
+import { EmptyStateProjectRequired } from "@/components/ui/EmptyStateProjectRequired";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -37,9 +38,12 @@ interface DemandsResponse {
     discarded_at: string | null;
     end_date: string | null;
   }[];
+  projects_by_pk: {
+    name: string;
+  };
 }
 
-const getDemandsQuery = (projectId: string) => gql`
+const getDemandsQuery = (projectId: string | null) => gql`
   query DemandsQuery {
     demands(
       where: { project_id: { _eq: ${projectId} } }
@@ -51,6 +55,11 @@ const getDemandsQuery = (projectId: string) => gql`
       commitment_date
       discarded_at
       end_date
+    }
+    projects_by_pk(
+      id: ${projectId}
+    ) {
+      name
     }
   }
 `;
@@ -67,12 +76,25 @@ interface DemandWithLeadTime {
 
 export default function LeadTimesPage() {
   const searchParams = useSearchParams();
-  const projectId = searchParams.get('project_id') || '2226';
-  
+  const projectId = searchParams.get('project_id') || "0";
+  const isProjectIdEmpty = !projectId || projectId === "0";
+
   const { loading, error, data } = useQuery<DemandsResponse>(getDemandsQuery(projectId), {
     fetchPolicy: "network-only",
+    skip: isProjectIdEmpty
   });
 
+  if (isProjectIdEmpty) {
+    return (
+      <main className="container mx-auto p-4">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Lead Times</h1>
+        </div>
+        <EmptyStateProjectRequired />
+      </main>
+    );
+  }
+  
   const demandsWithLeadTimes: DemandWithLeadTime[] = [];
   
   if (data?.demands) {
@@ -326,7 +348,12 @@ export default function LeadTimesPage() {
     return (
       <main className="container mx-auto p-4">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Lead Times</h1>
+          <h1 className="text-3xl font-bold">
+            Lead Times
+            <span className="ml-2">
+              <div className="inline-block h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+            </span>
+          </h1>
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-24"></div>
           </div>
@@ -347,7 +374,12 @@ export default function LeadTimesPage() {
   if (error) {
     return (
       <main className="container mx-auto p-4">
-        <h1 className="mb-8 text-3xl font-bold">Lead Times</h1>
+        <h1 className="mb-8 text-3xl font-bold">
+          Lead Times
+          {data?.projects_by_pk?.name && (
+            <span className="ml-2 text-blue-600">- {data.projects_by_pk.name}</span>
+          )}
+        </h1>
         <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center mb-3">
             <svg className="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -372,7 +404,12 @@ export default function LeadTimesPage() {
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Lead Times</h1>
+        <h1 className="text-3xl font-bold">
+          Lead Times
+          {data?.projects_by_pk?.name && (
+            <span className="ml-2 text-blue-600">- {data.projects_by_pk.name}</span>
+          )}
+        </h1>
         <div className="text-gray-500">
           <Link href="/demands" className="text-blue-600 hover:underline mr-4">
             Ver todas as demandas
