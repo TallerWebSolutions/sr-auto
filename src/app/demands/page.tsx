@@ -3,6 +3,7 @@
 import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
 import { DemandCard } from "@/components/ui/DemandCard";
+import { WorkItemTypeChart } from "@/components/ui/WorkItemTypeChart";
 
 interface DemandsResponse {
   demands: {
@@ -12,18 +13,20 @@ interface DemandsResponse {
     commitment_date: string | null;
     discarded_at: string | null;
     end_date: string | null;
+    work_item_type_id: number | null;
   }[];
 }
 
 const DEMANDS_QUERY = gql`
-  query MyQuery {
-    demands(where: { project_id: { _eq: 2226 } }) {
+  query DemandsQuery {
+    demands(where: {project_id: {_eq: 2224}}) {
       id
       slug
       demand_title
       commitment_date
       discarded_at
       end_date
+      work_item_type_id
     }
   }
 `;
@@ -90,6 +93,8 @@ export default function DemandsPage() {
           Total: <span className="font-semibold">{demands.length}</span>
         </div>
       </div>
+      
+      {demands.length > 0 && <WorkItemTypeChart demands={demands} />}
       
       {demands.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
