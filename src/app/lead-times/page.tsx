@@ -4,6 +4,7 @@ import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { DemandCard } from "@/components/ui/DemandCard";
+import { useSearchParams } from "next/navigation";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -38,10 +39,10 @@ interface DemandsResponse {
   }[];
 }
 
-const DEMANDS_QUERY = gql`
-  query MyQuery {
+const getDemandsQuery = (projectId: string) => gql`
+  query DemandsQuery {
     demands(
-      where: { project_id: { _eq: 2226 } }
+      where: { project_id: { _eq: ${projectId} } }
       order_by: { end_date: desc }
     ) {
       id
@@ -65,7 +66,10 @@ interface DemandWithLeadTime {
 }
 
 export default function LeadTimesPage() {
-  const { loading, error, data } = useQuery<DemandsResponse>(DEMANDS_QUERY, {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('project_id') || '2226';
+  
+  const { loading, error, data } = useQuery<DemandsResponse>(getDemandsQuery(projectId), {
     fetchPolicy: "network-only",
   });
 
@@ -397,7 +401,7 @@ export default function LeadTimesPage() {
           <div className="grid gap-6 md:grid-cols-1 mb-8">
             <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Evolução do Lead Time P80</h2>
-              <p className="text-sm text-gray-600 mb-4">Dados do projeto ID: 2226</p>
+              <p className="text-sm text-gray-600 mb-4">Dados do projeto ID: {projectId}</p>
               <div className="h-80 bg-white p-3 rounded-lg">
                 <Line options={chartOptions} data={chartData} />
               </div>
@@ -427,7 +431,7 @@ export default function LeadTimesPage() {
                         <td className="py-3 px-4 text-sm font-medium text-gray-900">{demand.demand_title}</td>
                         <td className="py-3 px-4 text-sm text-gray-600">{new Date(demand.commitment_date).toLocaleDateString()}</td>
                         <td className="py-3 px-4 text-sm text-gray-600">{new Date(demand.end_date).toLocaleDateString()}</td>
-                        <td className="py-3 px-4 text-sm text-right font-medium text-blue-700">{demand.lead_time_days} dias</td>
+                        <td className="py-3 px-4 text-sm text-right font-medium text-blue-700">{demand.lead_time_days.toFixed(1)} dias</td>
                       </tr>
                     ))}
                 </tbody>
