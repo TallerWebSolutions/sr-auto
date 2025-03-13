@@ -36,6 +36,9 @@ export default function RootLayout({
             <Link href="/escopo" className="hover:text-gray-300">
               Escopo
             </Link>
+            <Link href="/status-report" className="hover:text-gray-300">
+              Status Report
+            </Link>
           </div>
         </nav>
         <ApolloWrapper>{children}</ApolloWrapper>
