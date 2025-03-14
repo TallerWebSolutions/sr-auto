@@ -2,6 +2,7 @@
 
 import { gql, useQuery } from "@apollo/client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -32,6 +33,7 @@ import {
   calculateHoursNeeded,
   prepareMonthlyChartData
 } from '@/components/hour-consumption';
+import { EmptyStateParameterRequired } from '@/components/ui/EmptyStateParameterRequired';
 
 ChartJS.register(
   CategoryScale,
@@ -57,22 +59,10 @@ interface DemandsResponse {
     effort_upstream: number | null;
     effort_downstream: number | null;
   }[];
+  customers_by_pk?: {
+    name: string;
+  };
 }
-
-const CUSTOMER_DEMANDS_HOURS_QUERY = gql`
-  query CustomerDemandsQuery {
-    demands(where: {customer_id: {_eq: 285}}) {
-      id
-      slug
-      demand_title
-      commitment_date
-      discarded_at
-      end_date
-      effort_upstream
-      effort_downstream
-    }
-  }
-`;
 
 interface ContractsResponse {
   contracts: {
@@ -83,9 +73,29 @@ interface ContractsResponse {
   }[];
 }
 
-const CONTRACTS_QUERY = gql`
+const getCustomerDemandsQuery = (customerId: string | null) => gql`
+  query CustomerDemandsQuery {
+    demands(where: {customer_id: {_eq: ${customerId}}}) {
+      id
+      slug
+      demand_title
+      commitment_date
+      discarded_at
+      end_date
+      effort_upstream
+      effort_downstream
+    }
+    customers_by_pk(
+      id: ${customerId}
+    ) {
+      name
+    }
+  }
+`;
+
+const getContractsQuery = (customerId: string | null) => gql`
   query ContractsQuery {
-    contracts(where: {customer_id: {_eq: 285}}) {
+    contracts(where: {customer_id: {_eq: ${customerId}}}) {
       id
       start_date
       total_hours
@@ -95,16 +105,35 @@ const CONTRACTS_QUERY = gql`
 `;
 
 export default function HourConsumptionPage() {
-  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(CUSTOMER_DEMANDS_HOURS_QUERY, {
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get('customer_id') || "0";
+  const isCustomerIdEmpty = !customerId || customerId === "0";
+
+  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(
+    getCustomerDemandsQuery(customerId), {
     fetchPolicy: "network-only",
+    skip: isCustomerIdEmpty
   });
   
-  const { loading: contractsLoading, error: contractsError, data: contractsData } = useQuery<ContractsResponse>(CONTRACTS_QUERY, {
+  const { loading: contractsLoading, error: contractsError, data: contractsData } = useQuery<ContractsResponse>(
+    getContractsQuery(customerId), {
     fetchPolicy: "network-only",
+    skip: isCustomerIdEmpty
   });
   
   const loading = demandsLoading || contractsLoading;
   const error = demandsError || contractsError;
+
+  if (isCustomerIdEmpty) {
+    return (
+      <main className="container mx-auto p-4">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Consumo de Horas</h1>
+        </div>
+        <EmptyStateParameterRequired paramName="customer_id" />
+      </main>
+    );
+  }
 
   // Process data
   const { allCustomerDemands, completedDemands, totalHoursConsumed, hpd } = processDemandsData(demandsData);
@@ -119,7 +148,6 @@ export default function HourConsumptionPage() {
 
   // Process weekly hours data for burnup chart
   const weeklyHoursData = processWeeklyHoursData(demandsData, activeContract);
-  console.log(weeklyHoursData);
   
   // Find current week index for highlighting
   const currentWeekIndex = getCurrentWeekIndex(weeklyHoursData);
@@ -141,7 +169,12 @@ export default function HourConsumptionPage() {
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Consumo de Horas</h1>
+        <h1 className="text-3xl font-bold">
+          Consumo de Horas
+          {demandsData?.customers_by_pk?.name && (
+            <span className="ml-2 text-blue-600">- {demandsData.customers_by_pk.name}</span>
+          )}
+        </h1>
         <div className="text-gray-500">
           <Link href="/demands" className="text-blue-600 hover:underline mr-4">
             Ver todas as demandas

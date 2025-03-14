@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { DemandCard } from "@/components/ui/DemandCard";
 import { useSearchParams } from "next/navigation";
-import { EmptyStateProjectRequired } from "@/components/ui/EmptyStateProjectRequired";
+import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -90,7 +90,7 @@ export default function LeadTimesPage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Lead Times</h1>
         </div>
-        <EmptyStateProjectRequired />
+        <EmptyStateParameterRequired paramName="project_id" />
       </main>
     );
   }

@@ -5,7 +5,12 @@ export function LoadingState() {
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Consumo de Horas</h1>
+        <h1 className="text-3xl font-bold">
+          Consumo de Horas
+          <span className="ml-2">
+            <div className="inline-block h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </span>
+        </h1>
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-24"></div>
         </div>
