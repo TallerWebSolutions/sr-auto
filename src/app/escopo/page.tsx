@@ -4,6 +4,8 @@ import React from "react";
 import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -38,6 +40,9 @@ interface DemandsResponse {
     discarded_at: string | null;
     end_date: string | null;
   }[];
+  projects_by_pk?: {
+    name: string;
+  };
 }
 
 interface ProjectResponse {
@@ -49,9 +54,9 @@ interface ProjectResponse {
   }[];
 }
 
-const PROJECT_QUERY = gql`
+const getProjectQuery = (projectId: string | null) => gql`
   query ProjectQuery {
-    projects(where: {id: {_eq: "2226"}}) {
+    projects(where: {id: {_eq: ${projectId}}}) {
       id
       start_date
       end_date
@@ -60,10 +65,10 @@ const PROJECT_QUERY = gql`
   }
 `;
 
-const SCOPE_QUERY = gql`
+const getScopeQuery = (projectId: string | null) => gql`
   query ProjectScopeQuery {
     demands(
-      where: {project_id: {_eq: 2226}}, 
+      where: {project_id: {_eq: ${projectId}}}, 
       order_by: {end_date: desc, commitment_date: desc}
     ) {
       id
@@ -72,6 +77,11 @@ const SCOPE_QUERY = gql`
       commitment_date
       discarded_at
       end_date
+    }
+    projects_by_pk(
+      id: ${projectId}
+    ) {
+      name
     }
   }
 `;
@@ -91,16 +101,33 @@ interface WeeklyData {
 }
 
 export default function ScopePage() {
-  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(SCOPE_QUERY, {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('project_id') || "0";
+  const isProjectIdEmpty = !projectId || projectId === "0";
+
+  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(getScopeQuery(projectId), {
     fetchPolicy: "network-only",
+    skip: isProjectIdEmpty
   });
   
-  const { loading: projectLoading, error: projectError, data: projectData } = useQuery<ProjectResponse>(PROJECT_QUERY, {
+  const { loading: projectLoading, error: projectError, data: projectData } = useQuery<ProjectResponse>(getProjectQuery(projectId), {
     fetchPolicy: "network-only",
+    skip: isProjectIdEmpty
   });
   
   const loading = demandsLoading || projectLoading;
   const error = demandsError || projectError;
+
+  if (isProjectIdEmpty) {
+    return (
+      <main className="container mx-auto p-4">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Análise de Escopo</h1>
+        </div>
+        <EmptyStateParameterRequired paramName="project_id" />
+      </main>
+    );
+  }
 
   // Format date function
   const formatDate = (dateString: string | null) => {
@@ -508,7 +535,12 @@ export default function ScopePage() {
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Análise de Escopo</h1>
+        <h1 className="text-3xl font-bold">
+          Análise de Escopo
+          {demandsData?.projects_by_pk?.name && (
+            <span className="ml-2 text-blue-600">- {demandsData.projects_by_pk.name}</span>
+          )}
+        </h1>
         <div className="text-gray-500">
           <Link href="/demands" className="text-blue-600 hover:underline mr-4">
             Ver todas as demandas
