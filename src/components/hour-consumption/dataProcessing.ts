@@ -10,6 +10,7 @@ interface DemandsData {
     end_date: string | null;
     effort_upstream: number | null;
     effort_downstream: number | null;
+    contract_id: number | null;
   }[];
 }
 

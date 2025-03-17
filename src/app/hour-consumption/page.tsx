@@ -58,6 +58,7 @@ interface DemandsResponse {
     end_date: string | null;
     effort_upstream: number | null;
     effort_downstream: number | null;
+    contract_id: number | null;
   }[];
   customers_by_pk?: {
     name: string;
@@ -73,25 +74,36 @@ interface ContractsResponse {
   }[];
 }
 
-const getCustomerDemandsQuery = (customerId: string | null) => gql`
-  query CustomerDemandsQuery {
-    demands(where: {customer_id: {_eq: ${customerId}}}) {
-      id
-      slug
-      demand_title
-      commitment_date
-      discarded_at
-      end_date
-      effort_upstream
-      effort_downstream
-    }
-    customers_by_pk(
-      id: ${customerId}
-    ) {
-      name
-    }
+const getCustomerDemandsQuery = (customerId: string | null, contractId: string | null) => {
+  let whereClause = `{customer_id: {_eq: ${customerId}}`;
+  
+  if (contractId && contractId !== "0") {
+    whereClause += `, contract_id: {_eq: ${contractId}}`;
   }
-`;
+  
+  whereClause += `}`;
+  
+  return gql`
+    query CustomerDemandsQuery {
+      demands(where: ${whereClause}) {
+        id
+        slug
+        demand_title
+        commitment_date
+        discarded_at
+        end_date
+        effort_upstream
+        effort_downstream
+        contract_id
+      }
+      customers_by_pk(
+        id: ${customerId}
+      ) {
+        name
+      }
+    }
+  `;
+};
 
 const getContractsQuery = (customerId: string | null) => gql`
   query ContractsQuery {
@@ -107,10 +119,11 @@ const getContractsQuery = (customerId: string | null) => gql`
 export default function HourConsumptionPage() {
   const searchParams = useSearchParams();
   const customerId = searchParams.get('customer_id') || "0";
+  const contractId = searchParams.get('contract_id') || "0";
   const isCustomerIdEmpty = !customerId || customerId === "0";
 
   const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(
-    getCustomerDemandsQuery(customerId), {
+    getCustomerDemandsQuery(customerId, contractId), {
     fetchPolicy: "network-only",
     skip: isCustomerIdEmpty
   });
@@ -139,7 +152,9 @@ export default function HourConsumptionPage() {
   const { allCustomerDemands, completedDemands, totalHoursConsumed, hpd } = processDemandsData(demandsData);
   
   // Get active contract
-  const activeContract = getActiveContract(contractsData);
+  const activeContract = contractId && contractId !== "0" 
+    ? contractsData?.contracts.find(contract => contract.id.toString() === contractId)
+    : getActiveContract(contractsData);
   
   // Calculate contract hours data
   const contractTotalHours = activeContract?.total_hours || 0;
@@ -173,6 +188,9 @@ export default function HourConsumptionPage() {
           Consumo de Horas
           {demandsData?.customers_by_pk?.name && (
             <span className="ml-2 text-blue-600">- {demandsData.customers_by_pk.name}</span>
+          )}
+          {contractId && contractId !== "0" && activeContract && (
+            <span className="ml-2 text-green-600">- Contrato #{contractId}</span>
           )}
         </h1>
         <div className="text-gray-500">
