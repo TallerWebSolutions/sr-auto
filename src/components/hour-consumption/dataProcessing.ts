@@ -66,10 +66,11 @@ export function processDemandsData(demandsData: DemandsData | undefined): {
 
   // Calculate total hours consumed for all customer demands
   const totalHoursConsumed = allCustomerDemands.reduce((acc, demand) => acc + demand.hours_consumed, 0);
+  const totalHoursConsumedForCompletedDemands = completedDemands.reduce((acc, demand) => acc + demand.hours_consumed, 0);
   
   // Calculate HpD (Hours per Demand) for completed demands
   const totalCompletedDemands = completedDemands.length;
-  const hpd = totalCompletedDemands > 0 ? totalHoursConsumed / totalCompletedDemands : 0;
+  const hpd = totalCompletedDemands > 0 ? totalHoursConsumedForCompletedDemands / totalCompletedDemands : 0;
 
   return {
     allCustomerDemands,
