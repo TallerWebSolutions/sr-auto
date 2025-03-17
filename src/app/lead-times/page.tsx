@@ -196,7 +196,7 @@ export default function LeadTimesPage() {
     const firstEndDate = new Date(sortedDemands[0].end_date);
     const firstWeekSunday = getSundayOfWeek(firstEndDate);
     
-    const lastDate = new Date('2025-03-01');
+    const lastDate = new Date();
     const lastWeekSunday = getSundayOfWeek(lastDate);
 
     const sundays: Date[] = [];
