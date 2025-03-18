@@ -39,6 +39,9 @@ export default function RootLayout({
             <Link href="/status-report" className="hover:text-gray-300">
               Status Report
             </Link>
+            <Link href="/portfolio-units" className="hover:text-gray-300">
+              Unidades de Portfolio
+            </Link>
           </div>
         </nav>
         <ApolloWrapper>{children}</ApolloWrapper>
