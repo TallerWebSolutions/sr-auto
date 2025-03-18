@@ -5,8 +5,8 @@ import { gql } from "@apollo/client";
 import { Badge } from "./badge";
 
 const GET_PORTFOLIO_UNITS = gql`
-  query PortfolioUnits {
-    portfolio_units(where: {product_id: {_eq: 370}}) {
+  query PortfolioUnits($productId: Int!) {
+    portfolio_units(where: {product_id: {_eq: $productId}}) {
       name
       parent_id
       portfolio_unit_type
@@ -18,12 +18,16 @@ const GET_PORTFOLIO_UNITS = gql`
 interface PortfolioUnit {
   name: string;
   parent_id: number | null;
-  portfolio_unit_type: string;
+  portfolio_unit_type: number;
   id: number;
 }
 
 interface GroupedUnits {
   [key: string]: PortfolioUnit[];
+}
+
+interface PortfolioUnitsListProps {
+  productId: number;
 }
 
 const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -33,8 +37,10 @@ const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" 
   "4": { label: "Épico", variant: "default" }
 };
 
-export function PortfolioUnitsList() {
-  const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS);
+export function PortfolioUnitsList({ productId }: PortfolioUnitsListProps) {
+  const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS, {
+    variables: { productId }
+  });
 
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro ao carregar unidades</div>;

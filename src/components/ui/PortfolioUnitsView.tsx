@@ -6,7 +6,11 @@ import { PortfolioUnitsTable } from "./PortfolioUnitsTable"
 import { ToggleGroup, ToggleButton } from "./toggle-group"
 import { Layout, Table } from "lucide-react"
 
-export function PortfolioUnitsView() {
+interface PortfolioUnitsViewProps {
+  productId: number;
+}
+
+export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
   const [viewMode, setViewMode] = useState<string>("table")
 
   return (
@@ -33,12 +37,12 @@ export function PortfolioUnitsView() {
         {viewMode === "table" ? (
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold mb-4">Tabela de Unidades</h2>
-            <PortfolioUnitsTable />
+            <PortfolioUnitsTable productId={productId} />
           </div>
         ) : (
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold mb-4">Lista de Unidades</h2>
-            <PortfolioUnitsList />
+            <PortfolioUnitsList productId={productId} />
           </div>
         )}
       </div>
