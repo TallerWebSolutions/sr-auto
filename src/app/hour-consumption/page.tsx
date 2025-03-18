@@ -148,29 +148,22 @@ export default function HourConsumptionPage() {
     );
   }
 
-  // Process data
   const { allCustomerDemands, completedDemands, totalHoursConsumed, hpd } = processDemandsData(demandsData);
   
-  // Get active contract
   const activeContract = contractId && contractId !== "0" 
     ? contractsData?.contracts.find(contract => contract.id.toString() === contractId)
     : getActiveContract(contractsData);
   
-  // Calculate contract hours data
   const contractTotalHours = activeContract?.total_hours || 0;
   const hoursUsedPercentage = contractTotalHours > 0 ? (totalHoursConsumed / contractTotalHours) * 100 : 0;
   const hoursRemaining = contractTotalHours - totalHoursConsumed > 0 ? contractTotalHours - totalHoursConsumed : 0;
 
-  // Process weekly hours data for burnup chart
   const weeklyHoursData = processWeeklyHoursData(demandsData, activeContract);
   
-  // Find current week index for highlighting
   const currentWeekIndex = getCurrentWeekIndex(weeklyHoursData);
   
-  // Calculate hours needed to reach ideal progress
   const hoursNeeded = calculateHoursNeeded(weeklyHoursData, currentWeekIndex, contractTotalHours);
   
-  // Prepare monthly chart data
   const monthlyChartData = prepareMonthlyChartData(completedDemands);
 
   if (loading) {
