@@ -85,6 +85,40 @@ export default function DemandsPage() {
 
   const demands = data?.demands || [];
 
+  const sortDemandsByStatus = (demands: DemandsResponse['demands']) => {
+    return [...demands].sort((a, b) => {
+      const getStatusPriority = (demand: typeof a) => {
+        if (demand.discarded_at) return 4;
+        if (!demand.commitment_date) return 3;
+        if (demand.end_date) return 2;
+        return 1;
+      };
+
+      const statusPriorityA = getStatusPriority(a);
+      const statusPriorityB = getStatusPriority(b);
+
+      if (statusPriorityA !== statusPriorityB) {
+        return statusPriorityA - statusPriorityB;
+      }
+
+      if (statusPriorityA === 1) {
+        return new Date(a.commitment_date!).getTime() - new Date(b.commitment_date!).getTime();
+      }
+
+      if (statusPriorityA === 2) {
+        return new Date(b.end_date!).getTime() - new Date(a.end_date!).getTime();
+      }
+
+      if (statusPriorityA === 4) {
+        return new Date(b.discarded_at!).getTime() - new Date(a.discarded_at!).getTime();
+      }
+
+      return 0;
+    });
+  };
+
+  const sortedDemands = sortDemandsByStatus(demands);
+
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
@@ -98,7 +132,7 @@ export default function DemandsPage() {
       
       {demands.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {demands.map((demand) => (
+          {sortedDemands.map((demand) => (
             <DemandCard
               key={demand.id}
               demand={demand}
