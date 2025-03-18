@@ -4,6 +4,8 @@ import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
 import { DemandCard } from "@/components/ui/DemandCard";
 import { WorkItemTypeChart } from "@/components/ui/WorkItemTypeChart";
+import { useSearchParams } from "next/navigation";
+import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired";
 
 interface DemandsResponse {
   demands: {
@@ -15,11 +17,14 @@ interface DemandsResponse {
     end_date: string | null;
     work_item_type_id: number | null;
   }[];
+  projects_by_pk?: {
+    name: string;
+  };
 }
 
-const DEMANDS_QUERY = gql`
+const DEMANDS_QUERY = (projectId: string | null) => gql`
   query DemandsQuery {
-    demands(where: {project_id: {_eq: 2224}}) {
+    demands(where: {project_id: {_eq: ${projectId}}}) {
       id
       slug
       demand_title
@@ -28,19 +33,45 @@ const DEMANDS_QUERY = gql`
       end_date
       work_item_type_id
     }
+    projects_by_pk(
+      id: ${projectId}
+    ) {
+      name
+    }
   }
 `;
 
 export default function DemandsPage() {
-  const { loading, error, data } = useQuery<DemandsResponse>(DEMANDS_QUERY, {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('project_id') || "0";
+  const isProjectIdEmpty = !projectId || projectId === "0";
+
+  const { loading, error, data } = useQuery<DemandsResponse>(DEMANDS_QUERY(projectId), {
     fetchPolicy: "network-only",
+    skip: isProjectIdEmpty
   });
+
+  if (isProjectIdEmpty) {
+    return (
+      <main className="container mx-auto p-4">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Demandas</h1>
+        </div>
+        <EmptyStateParameterRequired paramName="project_id" />
+      </main>
+    );
+  }
 
   if (loading) {
     return (
       <main className="container mx-auto p-4">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Demandas</h1>
+          <h1 className="text-3xl font-bold">
+            Demandas
+            {data?.projects_by_pk?.name && (
+              <span className="ml-2 text-blue-600">- {data.projects_by_pk.name}</span>
+            )}
+          </h1>
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-24"></div>
           </div>
@@ -122,7 +153,12 @@ export default function DemandsPage() {
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Demandas</h1>
+        <h1 className="text-3xl font-bold">
+          Demandas
+          {data?.projects_by_pk?.name && (
+            <span className="ml-2 text-blue-600">- {data.projects_by_pk.name}</span>
+          )}
+        </h1>
         <div className="text-gray-500">
           Total: <span className="font-semibold">{demands.length}</span>
         </div>
@@ -146,7 +182,7 @@ export default function DemandsPage() {
           </svg>
           <h2 className="text-xl font-semibold mb-2">Nenhuma demanda encontrada</h2>
           <p className="text-gray-500">
-            Não foram encontradas demandas com os critérios atuais.
+            Não foram encontradas demandas para este projeto.
           </p>
         </div>
       )}
