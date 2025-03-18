@@ -143,7 +143,7 @@ export default function HourConsumptionPage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Consumo de Horas</h1>
         </div>
-        <EmptyStateParameterRequired paramName="customer_id" />
+        <EmptyStateParameterRequired parameterName="customer_id" />
       </main>
     );
   }

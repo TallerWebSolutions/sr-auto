@@ -124,7 +124,7 @@ export default function ScopePage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Análise de Escopo</h1>
         </div>
-        <EmptyStateParameterRequired paramName="project_id" />
+        <EmptyStateParameterRequired parameterName="project_id" />
       </main>
     );
   }
