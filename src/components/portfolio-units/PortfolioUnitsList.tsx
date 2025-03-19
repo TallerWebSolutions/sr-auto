@@ -57,7 +57,7 @@ const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" 
 export function PortfolioUnitsList({ productId }: PortfolioUnitsListProps) {
   const [sorting, setSorting] = useState<{ field: 'hours' | 'name', direction: 'asc' | 'desc' }>({
     field: 'hours',
-    direction: 'desc'
+    direction: 'asc'
   });
 
   const getOrderBy = () => {
