@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from "react"
-import { PortfolioUnitsList } from "./PortfolioUnitsList"
 import { PortfolioUnitsBoard } from "./PortfolioUnitsBoard"
+import { PortfolioUnitsList } from "./PortfolioUnitsList"
 import { ToggleGroup, ToggleButton } from "../ui/toggle-group"
 import { Layout, Table } from "lucide-react"
 
@@ -11,7 +11,7 @@ interface PortfolioUnitsViewProps {
 }
 
 export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
-  const [viewMode, setViewMode] = useState<string>("table")
+  const [viewMode, setViewMode] = useState<string>("list")
 
   return (
     <div className="container mx-auto py-6">
@@ -23,9 +23,9 @@ export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
           onValueChange={setViewMode}
           className="ml-auto"
         >
-          <ToggleButton value="table" aria-label="Visualização de tabela">
+          <ToggleButton value="list" aria-label="Visualização de tabela">
             <Table className="h-4 w-4 mr-2" />
-            Tabela
+            Lista
           </ToggleButton>
           <ToggleButton value="board" aria-label="Visualização de quadro">
             <Layout className="h-4 w-4 mr-2" />
@@ -34,15 +34,15 @@ export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
         </ToggleGroup>
       </div>
       <div className="grid gap-6">
-        {viewMode === "table" ? (
-          <div className="rounded-lg border p-6">
-            <h2 className="text-xl font-semibold mb-4">Tabela de Unidades</h2>
-            <PortfolioUnitsBoard productId={productId} />
-          </div>
-        ) : (
+        {viewMode === "list" ? (
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold mb-4">Lista de Unidades</h2>
             <PortfolioUnitsList productId={productId} />
+          </div>
+        ) : (
+          <div className="rounded-lg border p-6">
+            <h2 className="text-xl font-semibold mb-4">Quadro de Unidades</h2>
+            <PortfolioUnitsBoard productId={productId} />
           </div>
         )}
       </div>

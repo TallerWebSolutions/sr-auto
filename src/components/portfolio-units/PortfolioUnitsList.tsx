@@ -3,14 +3,15 @@
 import { useQuery } from "@apollo/client";
 import { gql } from "@apollo/client";
 import { Badge } from "../ui/badge";
+import { ArrowUpDown } from "lucide-react";
+import { useState } from "react";
 
 const GET_PORTFOLIO_UNITS = gql`
   query PortfolioUnits($productId: Int!) {
     portfolio_units(where: {product_id: {_eq: $productId}}) {
       name
-      parent_id
-      portfolio_unit_type
       id
+      portfolio_unit_type
       demands_aggregate {
         aggregate {
           sum {
@@ -26,7 +27,6 @@ const GET_PORTFOLIO_UNITS = gql`
 
 interface PortfolioUnit {
   name: string;
-  parent_id: number | null;
   portfolio_unit_type: number;
   id: number;
   demands_aggregate: {
@@ -38,10 +38,6 @@ interface PortfolioUnit {
       }
     }
   }
-}
-
-interface GroupedUnits {
-  [key: string]: PortfolioUnit[];
 }
 
 interface PortfolioUnitsListProps {
@@ -59,78 +55,68 @@ export function PortfolioUnitsList({ productId }: PortfolioUnitsListProps) {
   const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS, {
     variables: { productId }
   });
+  const [sortByHours, setSortByHours] = useState(false);
 
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro ao carregar unidades</div>;
 
   const units: PortfolioUnit[] = data?.portfolio_units || [];
-  const groupedUnits = units.reduce((acc: GroupedUnits, unit: PortfolioUnit) => {
-    if (unit.parent_id) {
-      if (!acc[unit.parent_id]) {
-        acc[unit.parent_id] = [];
-      }
-      acc[unit.parent_id].push(unit);
-    }
-    return acc;
-  }, {});
+  const filteredUnits = units.filter(unit => unit.portfolio_unit_type === 4);
 
-  const getUnitName = (id: number): string => {
-    return units.find((unit: PortfolioUnit) => unit.id === id)?.name || '';
+  const getTotalHours = (unit: PortfolioUnit): number => {
+    const upstreamHours = unit.demands_aggregate.aggregate.sum.effort_upstream || 0;
+    const downstreamHours = unit.demands_aggregate.aggregate.sum.effort_downstream || 0;
+    return upstreamHours + downstreamHours;
   };
 
-  const sortedParentIds = Object.keys(groupedUnits).sort((a, b) => {
-    const nameA = getUnitName(Number(a));
-    const nameB = getUnitName(Number(b));
-    return nameA.localeCompare(nameB);
+  const sortedUnits = [...filteredUnits].sort((a, b) => {
+    if (sortByHours) {
+      return getTotalHours(b) - getTotalHours(a);
+    }
+    return a.name.localeCompare(b.name);
   });
-
+  
   return (
-    <div className="container mx-auto">
-      <div className="overflow-x-auto">
-        <div className="flex gap-4 p-4 min-w-max">
-          {sortedParentIds.map((parentId) => (
-            <div key={parentId} className="w-[280px] flex-shrink-0 flex flex-col bg-white rounded-lg border">
-              <div className="p-3 bg-gray-50 border-b">
-                <h3 className="text-lg font-semibold truncate">
-                  {getUnitName(Number(parentId))}
-                </h3>
-              </div>
-              <div className="flex-1 overflow-x-scroll">
-                <div className="h-auto">
-                  <div className="space-y-2 p-3">
-                    {groupedUnits[parentId].map((unit: PortfolioUnit) => {
-                      const upstreamHours = unit.demands_aggregate.aggregate.sum.effort_upstream || 0;
-                      const downstreamHours = unit.demands_aggregate.aggregate.sum.effort_downstream || 0;
-                      const totalHours = upstreamHours + downstreamHours;
-                      const totalCost = unit.demands_aggregate.aggregate.sum.cost_to_project || 0;
-                      
-                      return (
-                        <div
-                          key={unit.id}
-                          className="flex items-center justify-between p-2 rounded-md border bg-white hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="font-medium truncate">{unit.name}</div>
-                            <Badge 
-                              variant={portfolioUnitTypeMap[unit.portfolio_unit_type]?.variant || "secondary"}
-                            >
-                              {portfolioUnitTypeMap[unit.portfolio_unit_type]?.label || unit.portfolio_unit_type}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-col items-end text-sm">
-                            {totalHours > 0 && <span className="text-gray-600">{totalHours.toFixed(2)}h</span>}
-                            {totalCost > 0 && <span className="text-gray-500">R$ {totalCost.toFixed(2)}</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="bg-gray-50">
+            <th className="px-4 py-3 text-left font-medium text-gray-500">Nome</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-500">Tipo</th>
+            <th className="px-4 py-3 text-right font-medium text-gray-500">Custo Total</th>
+            <th 
+              className="px-4 py-3 text-right font-medium text-gray-500 cursor-pointer hover:text-gray-700 flex items-center justify-end gap-2"
+              onClick={() => setSortByHours(!sortByHours)}
+            >
+              Horas Totais
+              <ArrowUpDown className="h-4 w-4" />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedUnits.map((unit) => {
+            const upstreamHours = unit.demands_aggregate.aggregate.sum.effort_upstream || 0;
+            const downstreamHours = unit.demands_aggregate.aggregate.sum.effort_downstream || 0;
+            const totalHours = upstreamHours + downstreamHours;
+            const totalCost = unit.demands_aggregate.aggregate.sum.cost_to_project || 0;
+            
+            return (
+              <tr key={unit.id} className="border-t hover:bg-gray-50">
+                <td className="px-4 py-3 text-sm">{unit.name}</td>
+                <td className="px-4 py-3">
+                  <Badge 
+                    variant={portfolioUnitTypeMap[unit.portfolio_unit_type]?.variant || "secondary"}
+                  >
+                    {portfolioUnitTypeMap[unit.portfolio_unit_type]?.label || unit.portfolio_unit_type}
+                  </Badge>
+                </td>
+                <td className="px-4 py-3 text-sm text-right">{totalCost > 0 ? `R$ ${totalCost.toFixed(2)}` : '-'}</td>
+                <td className="px-4 py-3 text-sm text-right">{totalHours > 0 ? totalHours.toFixed(2) : '-'}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 } 
