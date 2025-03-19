@@ -1,4 +1,5 @@
 import { ContractDoughnutChart } from "@/components/hour-consumption/ContractDoughnutChart";
+import { MetricCard } from "@/components/ui/MetricCard";
 import React from "react";
 
 interface HourConsumptionSummaryProps {
@@ -20,51 +21,29 @@ export function HourConsumptionSummary({
 }: HourConsumptionSummaryProps) {
   const hoursUsedPercentage = (totalHoursConsumed / contractTotalHours) * 100;
   const hoursRemaining = contractTotalHours - totalHoursConsumed;
+  
+  const contractDateRange = contractStartDate && contractEndDate
+    ? formatDate(contractStartDate) + " a " + formatDate(contractEndDate)
+    : "Nenhum";
+    
   return (
     <div className="grid gap-6 md:grid-cols-3 mb-6">
       <div className="grid gap-6 md:grid-cols-1 mb-6">
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex flex-col">
-            <div className="mb-3">
-              <h2 className="text-lg font-semibold text-green-800">
-                Horas Disponíveis no Contrato
-              </h2>
-              <p className="text-green-600">
-                Contrato ativo:{" "}
-                {contractStartDate && contractEndDate
-                  ? formatDate(contractStartDate) +
-                    " a " +
-                    formatDate(contractEndDate)
-                  : "Nenhum"}
-              </p>
-            </div>
-            <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-              <span className="text-2xl font-bold text-green-700">
-                {contractTotalHours}
-              </span>
-              <span className="text-xs text-gray-500 mt-1">horas</span>
-            </div>
-          </div>
-        </div>
+        <MetricCard
+          title="Horas Disponíveis no Contrato"
+          subtitle={`Contrato ativo: ${contractDateRange}`}
+          value={contractTotalHours}
+          unit="horas"
+          color="green"
+        />
 
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex flex-col">
-            <div className="mb-3">
-              <h2 className="text-lg font-semibold text-red-800">
-                Consumo Total de Horas
-              </h2>
-              <p className="text-red-600">
-                Todas as demandas do produto (Cliente ID: 285)
-              </p>
-            </div>
-            <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-              <span className="text-2xl font-bold text-red-700">
-                {totalHoursConsumed.toFixed(0)}
-              </span>
-              <span className="text-xs text-gray-500 mt-1">horas</span>
-            </div>
-          </div>
-        </div>
+        <MetricCard
+          title="Consumo Total de Horas"
+          subtitle="Todas as demandas do produto (Cliente ID: 285)"
+          value={totalHoursConsumed.toFixed(0)}
+          unit="horas"
+          color="red"
+        />
       </div>
 
       <ContractDoughnutChart
@@ -74,24 +53,14 @@ export function HourConsumptionSummary({
         hoursUsedPercentage={hoursUsedPercentage}
       />
 
-      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg h-fit">
-        <div className="flex flex-col">
-          <div className="mb-3">
-            <h2 className="text-lg font-semibold text-purple-800">
-              HpD (Horas por Demanda)
-            </h2>
-            <p className="text-purple-600">
-              Média de horas consumidas por demanda
-            </p>
-          </div>
-          <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-            <span className="text-2xl font-bold text-purple-700">
-              {hpd.toFixed(2)}
-            </span>
-            <span className="text-xs text-gray-500 mt-1">horas/demanda</span>
-          </div>
-        </div>
-      </div>
+      <MetricCard
+        title="HpD (Horas por Demanda)"
+        subtitle="Média de horas consumidas por demanda"
+        value={hpd.toFixed(2)}
+        unit="horas/demanda"
+        color="purple"
+        className="h-fit"
+      />
     </div>
   );
 }

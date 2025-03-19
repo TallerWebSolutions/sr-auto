@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DemandCard } from "@/components/ui/DemandCard";
 import { useSearchParams } from "next/navigation";
 import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired";
+import { MetricCard } from "@/components/ui/MetricCard";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -421,18 +422,13 @@ export default function LeadTimesPage() {
       {demandsWithLeadTimes.length > 0 ? (
         <>
           <div className="grid gap-6 md:grid-cols-3 mb-6">
-            <Card className="p-4 bg-green-50 border border-green-200">
-              <div className="flex flex-col">
-                <div className="mb-3">
-                  <h2 className="text-lg font-semibold text-green-800">Lead Time P80</h2>
-                  <p className="text-green-600">Baseado em {demandsWithLeadTimes.length} demandas do projeto</p>
-                </div>
-                <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                  <span className="text-2xl font-bold text-green-700">{p80LeadTime}</span>
-                  <span className="text-xs text-gray-500 mt-1">dias</span>
-                </div>
-              </div>
-            </Card>
+            <MetricCard
+              title="Lead Time P80"
+              subtitle={`Baseado em ${demandsWithLeadTimes.length} demandas do projeto`}
+              value={p80LeadTime}
+              unit="dias"
+              color="green"
+            />
           </div>
 
           <div className="grid gap-6 md:grid-cols-1 mb-8">

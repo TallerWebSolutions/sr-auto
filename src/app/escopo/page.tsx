@@ -19,6 +19,7 @@ import {
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
+import { MetricCard } from "@/components/ui/MetricCard";
 
 ChartJS.register(
   CategoryScale,
@@ -552,44 +553,29 @@ export default function ScopePage() {
       {demandsData?.demands && demandsData.demands.length > 0 ? (
         <>
           <div className="grid gap-6 md:grid-cols-3 mb-6">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex flex-col">
-                <div className="mb-3">
-                  <h2 className="text-lg font-semibold text-blue-800">Escopo Total</h2>
-                  <p className="text-blue-600">Total de demandas no projeto</p>
-                </div>
-                <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                  <span className="text-2xl font-bold text-blue-700">{totalDemands}</span>
-                  <span className="text-xs text-gray-500 mt-1">demandas</span>
-                </div>
-              </div>
-            </div>
+            <MetricCard
+              title="Escopo Total"
+              subtitle="Total de demandas no projeto"
+              value={totalDemands}
+              unit="demandas"
+              color="blue"
+            />
 
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex flex-col">
-                <div className="mb-3">
-                  <h2 className="text-lg font-semibold text-green-800">Demandas Entregues</h2>
-                  <p className="text-green-600">Demandas concluídas</p>
-                </div>
-                <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                  <span className="text-2xl font-bold text-green-700">{deliveredDemands}</span>
-                  <span className="text-xs text-gray-500 mt-1">demandas</span>
-                </div>
-              </div>
-            </div>
+            <MetricCard
+              title="Demandas Entregues"
+              subtitle="Demandas concluídas"
+              value={deliveredDemands}
+              unit="demandas"
+              color="green"
+            />
 
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex flex-col">
-                <div className="mb-3">
-                  <h2 className="text-lg font-semibold text-amber-800">Taxa de Conclusão</h2>
-                  <p className="text-amber-600">Percentual de demandas entregues</p>
-                </div>
-                <div className="flex flex-col items-center bg-white p-3 rounded-lg shadow-sm">
-                  <span className="text-2xl font-bold text-amber-700">{completionRate.toFixed(1)}%</span>
-                  <span className="text-xs text-gray-500 mt-1">concluído</span>
-                </div>
-              </div>
-            </div>
+            <MetricCard
+              title="Taxa de Conclusão"
+              subtitle="Percentual de demandas entregues"
+              value={`${completionRate.toFixed(1)}%`}
+              unit="concluído"
+              color="yellow"
+            />
           </div>
 
           <div className="mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
