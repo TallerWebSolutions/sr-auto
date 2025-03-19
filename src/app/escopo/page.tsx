@@ -5,7 +5,7 @@ import { gql, useQuery } from "@apollo/client";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired";
+import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -125,7 +125,7 @@ export default function ScopePage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Análise de Escopo</h1>
         </div>
-        <EmptyStateParameterRequired parameterName="project_id" />
+        <ParameterSelectionButtons parameterName="project_id" />
       </main>
     );
   }

@@ -32,7 +32,7 @@ import {
   calculateHoursNeeded,
   prepareMonthlyChartData,
 } from "@/components/hour-consumption";
-import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired";
+import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 
 ChartJS.register(
   CategoryScale,
@@ -154,7 +154,7 @@ export default function HourConsumptionPage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Consumo de Horas</h1>
         </div>
-        <EmptyStateParameterRequired parameterName="customer_id" />
+        <ParameterSelectionButtons parameterName="customer_id" />
       </main>
     );
   }

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { DemandCard } from "@/components/ui/DemandCard";
 import { useSearchParams } from "next/navigation";
-import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired";
+import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { 
   Chart as ChartJS, 
@@ -91,7 +91,7 @@ export default function LeadTimesPage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Lead Times</h1>
         </div>
-        <EmptyStateParameterRequired parameterName="project_id" />
+        <ParameterSelectionButtons parameterName="project_id" />
       </main>
     );
   }
@@ -150,8 +150,11 @@ export default function LeadTimesPage() {
   const getSundayOfWeek = (date: Date): Date => {
     const result = new Date(date);
     const day = result.getDay();
-    const diff = day === 0 ? 0 : 7 - day;
-    result.setDate(result.getDate() + diff);
+    if (day === 0) {
+      return result;
+    }
+    const daysUntilNextSunday = 7 - day;
+    result.setDate(result.getDate() + daysUntilNextSunday);
     return result;
   };
 
