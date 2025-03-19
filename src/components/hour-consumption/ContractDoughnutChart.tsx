@@ -7,7 +7,6 @@ interface ContractDoughnutChartProps {
   hoursRemaining: number;
   contractTotalHours: number;
   hoursUsedPercentage: number;
-  allCustomerDemandsCount: number;
 }
 
 export function ContractDoughnutChart({
@@ -15,7 +14,6 @@ export function ContractDoughnutChart({
   hoursRemaining,
   contractTotalHours,
   hoursUsedPercentage,
-  allCustomerDemandsCount
 }: ContractDoughnutChartProps) {
   const contractChartData = {
     labels: ['Horas Utilizadas', 'Horas Restantes'],
@@ -24,11 +22,11 @@ export function ContractDoughnutChart({
         data: [totalHoursConsumed, hoursRemaining],
         backgroundColor: [
           'rgba(239, 68, 68, 0.7)',
-          'rgba(59, 130, 246, 0.7)',
+          'rgba(22, 163, 74, 0.7)',
         ],
         borderColor: [
           'rgb(239, 68, 68)',
-          'rgb(59, 130, 246)',
+          'rgb(22, 163, 74)',
         ],
         borderWidth: 1,
       },
@@ -66,17 +64,14 @@ export function ContractDoughnutChart({
           <Doughnut options={contractChartOptions} data={contractChartData} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-sm text-gray-500">Utilizado</span>
-            <span className={`text-2xl font-bold ${hoursUsedPercentage > 90 ? 'text-red-600' : 'text-blue-700'}`}>
-              {hoursUsedPercentage.toFixed(1)}%
+            <span className={`text-2xl font-bold ${hoursUsedPercentage > 90 ? 'text-red-600' : 'text-red-600'}`}>
+              {hoursUsedPercentage.toFixed(0)}%
             </span>
           </div>
         </div>
       </div>
-      <p className="text-xs text-blue-700 mt-3 text-center">
-        {hoursRemaining.toFixed(2)} horas restantes de {contractTotalHours} horas contratadas
-      </p>
-      <p className="text-xs text-gray-600 mt-1 text-center">
-        Baseado em todas as {allCustomerDemandsCount} demandas do cliente
+      <p className="text-xs text-green-700 mt-3 text-center">
+        {hoursRemaining.toFixed(0)} horas restantes de {contractTotalHours} horas contratadas
       </p>
     </div>
   );

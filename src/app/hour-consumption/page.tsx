@@ -3,23 +3,22 @@
 import { gql, useQuery } from "@apollo/client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  LineElement, 
-  Title, 
-  Tooltip, 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
   Legend,
   BarElement,
-  ArcElement
-} from 'chart.js';
-import annotationPlugin from 'chartjs-plugin-annotation';
-import React from 'react';
+  ArcElement,
+} from "chart.js";
+import annotationPlugin from "chartjs-plugin-annotation";
+import React from "react";
 import {
   HourConsumptionSummary,
-  ContractDoughnutChart,
   MonthlyHoursBarChart,
   HoursBurnupChart,
   LoadingState,
@@ -31,9 +30,9 @@ import {
   processWeeklyHoursData,
   getCurrentWeekIndex,
   calculateHoursNeeded,
-  prepareMonthlyChartData
-} from '@/components/hour-consumption';
-import { EmptyStateParameterRequired } from '@/components/ui/EmptyStateParameterRequired';
+  prepareMonthlyChartData,
+} from "@/components/hour-consumption";
+import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired";
 
 ChartJS.register(
   CategoryScale,
@@ -74,15 +73,18 @@ interface ContractsResponse {
   }[];
 }
 
-const getCustomerDemandsQuery = (customerId: string | null, contractId: string | null) => {
+const getCustomerDemandsQuery = (
+  customerId: string | null,
+  contractId: string | null
+) => {
   let whereClause = `{customer_id: {_eq: ${customerId}}`;
-  
+
   if (contractId && contractId !== "0") {
     whereClause += `, contract_id: {_eq: ${contractId}}`;
   }
-  
+
   whereClause += `}`;
-  
+
   return gql`
     query CustomerDemandsQuery {
       demands(where: ${whereClause}) {
@@ -118,22 +120,31 @@ const getContractsQuery = (customerId: string | null) => gql`
 
 export default function HourConsumptionPage() {
   const searchParams = useSearchParams();
-  const customerId = searchParams.get('customer_id') || "0";
-  const contractId = searchParams.get('contract_id') || "0";
+  const customerId = searchParams.get("customer_id") || "0";
+  const contractId = searchParams.get("contract_id") || "0";
   const isCustomerIdEmpty = !customerId || customerId === "0";
 
-  const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(
-    getCustomerDemandsQuery(customerId, contractId), {
+  const {
+    loading: demandsLoading,
+    error: demandsError,
+    data: demandsData,
+  } = useQuery<DemandsResponse>(
+    getCustomerDemandsQuery(customerId, contractId),
+    {
+      fetchPolicy: "network-only",
+      skip: isCustomerIdEmpty,
+    }
+  );
+
+  const {
+    loading: contractsLoading,
+    error: contractsError,
+    data: contractsData,
+  } = useQuery<ContractsResponse>(getContractsQuery(customerId), {
     fetchPolicy: "network-only",
-    skip: isCustomerIdEmpty
+    skip: isCustomerIdEmpty,
   });
-  
-  const { loading: contractsLoading, error: contractsError, data: contractsData } = useQuery<ContractsResponse>(
-    getContractsQuery(customerId), {
-    fetchPolicy: "network-only",
-    skip: isCustomerIdEmpty
-  });
-  
+
   const loading = demandsLoading || contractsLoading;
   const error = demandsError || contractsError;
 
@@ -148,22 +159,28 @@ export default function HourConsumptionPage() {
     );
   }
 
-  const { allCustomerDemands, completedDemands, totalHoursConsumed, hpd } = processDemandsData(demandsData);
-  
-  const activeContract = contractId && contractId !== "0" 
-    ? contractsData?.contracts.find(contract => contract.id.toString() === contractId)
-    : getActiveContract(contractsData);
-  
+  const { allCustomerDemands, completedDemands, totalHoursConsumed, hpd } =
+    processDemandsData(demandsData);
+
+  const activeContract =
+    contractId && contractId !== "0"
+      ? contractsData?.contracts.find(
+          (contract) => contract.id.toString() === contractId
+        )
+      : getActiveContract(contractsData);
+
   const contractTotalHours = activeContract?.total_hours || 0;
-  const hoursUsedPercentage = contractTotalHours > 0 ? (totalHoursConsumed / contractTotalHours) * 100 : 0;
-  const hoursRemaining = contractTotalHours - totalHoursConsumed > 0 ? contractTotalHours - totalHoursConsumed : 0;
 
   const weeklyHoursData = processWeeklyHoursData(demandsData, activeContract);
-  
+
   const currentWeekIndex = getCurrentWeekIndex(weeklyHoursData);
-  
-  const hoursNeeded = calculateHoursNeeded(weeklyHoursData, currentWeekIndex, contractTotalHours);
-  
+
+  const hoursNeeded = calculateHoursNeeded(
+    weeklyHoursData,
+    currentWeekIndex,
+    contractTotalHours
+  );
+
   const monthlyChartData = prepareMonthlyChartData(completedDemands);
 
   if (loading) {
@@ -180,23 +197,28 @@ export default function HourConsumptionPage() {
         <h1 className="text-3xl font-bold">
           Consumo de Horas
           {demandsData?.customers_by_pk?.name && (
-            <span className="ml-2 text-blue-600">- {demandsData.customers_by_pk.name}</span>
+            <span className="ml-2 text-blue-600">
+              - {demandsData.customers_by_pk.name}
+            </span>
           )}
           {contractId && contractId !== "0" && activeContract && (
-            <span className="ml-2 text-green-600">- Contrato #{contractId}</span>
+            <span className="ml-2 text-green-600">
+              - Contrato #{contractId}
+            </span>
           )}
         </h1>
         <div className="text-gray-500">
           <Link href="/demands" className="text-blue-600 hover:underline mr-4">
             Ver todas as demandas
           </Link>
-          Total: <span className="font-semibold">{allCustomerDemands.length}</span>
+          Total:{" "}
+          <span className="font-semibold">{allCustomerDemands.length}</span>
         </div>
       </div>
-      
+
       {allCustomerDemands.length > 0 ? (
         <>
-          <HourConsumptionSummary 
+          <HourConsumptionSummary
             totalHoursConsumed={totalHoursConsumed}
             hpd={hpd}
             contractTotalHours={contractTotalHours}
@@ -205,7 +227,7 @@ export default function HourConsumptionPage() {
             formatDate={formatDate}
           />
 
-          <HoursBurnupChart 
+          <HoursBurnupChart
             weeklyHoursData={weeklyHoursData}
             currentWeekIndex={currentWeekIndex}
             hoursNeeded={hoursNeeded}
@@ -217,16 +239,6 @@ export default function HourConsumptionPage() {
 
           <div className="grid gap-6 md:grid-cols-2 mb-8">
             <MonthlyHoursBarChart chartData={monthlyChartData} />
-            
-            {activeContract && (
-              <ContractDoughnutChart 
-                totalHoursConsumed={totalHoursConsumed}
-                hoursRemaining={hoursRemaining}
-                contractTotalHours={contractTotalHours}
-                hoursUsedPercentage={hoursUsedPercentage}
-                allCustomerDemandsCount={allCustomerDemands.length}
-              />
-            )}
           </div>
         </>
       ) : (
@@ -234,4 +246,4 @@ export default function HourConsumptionPage() {
       )}
     </main>
   );
-} 
+}
