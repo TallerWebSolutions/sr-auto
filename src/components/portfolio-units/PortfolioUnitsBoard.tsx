@@ -2,7 +2,7 @@
 
 import { useQuery } from "@apollo/client";
 import { gql } from "@apollo/client";
-import { Badge } from "./badge";
+import { Badge } from "../ui/badge";
 
 const GET_PORTFOLIO_UNITS = gql`
   query PortfolioUnits($productId: Int!) {
@@ -38,7 +38,7 @@ interface PortfolioUnit {
   }
 }
 
-interface PortfolioUnitsTableProps {
+interface PortfolioUnitsBoardProps {
   productId: number;
 }
 
@@ -49,7 +49,7 @@ const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" 
   "4": { label: "Épico", variant: "default" }
 };
 
-export function PortfolioUnitsTable({ productId }: PortfolioUnitsTableProps) {
+export function PortfolioUnitsBoard({ productId }: PortfolioUnitsBoardProps) {
   const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS, {
     variables: { productId }
   });

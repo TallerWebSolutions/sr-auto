@@ -2,7 +2,7 @@
 
 import { useQuery } from "@apollo/client";
 import { gql } from "@apollo/client";
-import { Badge } from "./badge";
+import { Badge } from "../ui/badge";
 
 const GET_PORTFOLIO_UNITS = gql`
   query PortfolioUnits($productId: Int!) {

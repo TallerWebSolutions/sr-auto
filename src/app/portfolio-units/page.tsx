@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { PortfolioUnitsView } from "@/components/ui/PortfolioUnitsView"
+import { PortfolioUnitsView } from "@/components/portfolio-units/PortfolioUnitsView"
 import { EmptyStateParameterRequired } from "@/components/ui/EmptyStateParameterRequired"
 
 export const metadata: Metadata = {
