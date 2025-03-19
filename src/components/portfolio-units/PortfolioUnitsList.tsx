@@ -55,7 +55,10 @@ export function PortfolioUnitsList({ productId }: PortfolioUnitsListProps) {
   const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS, {
     variables: { productId }
   });
-  const [sortByHours, setSortByHours] = useState(false);
+  const [sorting, setSorting] = useState<{ field: 'hours' | 'name', direction: 'asc' | 'desc' }>({
+    field: 'hours',
+    direction: 'asc'
+  });
 
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro ao carregar unidades</div>;
@@ -70,23 +73,38 @@ export function PortfolioUnitsList({ productId }: PortfolioUnitsListProps) {
   };
 
   const sortedUnits = [...filteredUnits].sort((a, b) => {
-    if (sortByHours) {
-      return getTotalHours(b) - getTotalHours(a);
+    const multiplier = sorting.direction === 'desc' ? -1 : 1;
+    
+    if (sorting.field === 'hours') {
+      return (getTotalHours(b) - getTotalHours(a)) * multiplier;
     }
-    return a.name.localeCompare(b.name);
+    return a.name.localeCompare(b.name) * multiplier;
   });
+  
+  const toggleSort = (field: 'hours' | 'name') => {
+    setSorting(current => ({
+      field,
+      direction: current.field === field && current.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
   
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
           <tr className="bg-gray-50">
-            <th className="px-4 py-3 text-left font-medium text-gray-500">Nome</th>
+            <th 
+              className="px-4 py-3 text-left font-medium text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2"
+              onClick={() => toggleSort('name')}
+            >
+              Nome
+              <ArrowUpDown className="h-4 w-4" />
+            </th>
             <th className="px-4 py-3 text-left font-medium text-gray-500">Tipo</th>
             <th className="px-4 py-3 text-right font-medium text-gray-500">Custo Total</th>
             <th 
               className="px-4 py-3 text-right font-medium text-gray-500 cursor-pointer hover:text-gray-700 flex items-center justify-end gap-2"
-              onClick={() => setSortByHours(!sortByHours)}
+              onClick={() => toggleSort('hours')}
             >
               Horas Totais
               <ArrowUpDown className="h-4 w-4" />
