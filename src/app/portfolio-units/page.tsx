@@ -13,8 +13,10 @@ interface PortfolioUnitsPageProps {
   };
 }
 
-export default function PortfolioUnitsPage({ searchParams }: PortfolioUnitsPageProps) {
-  if (!searchParams.product_id) {
+export default async function PortfolioUnitsPage({ searchParams }: PortfolioUnitsPageProps) {
+  const params = await searchParams;
+  
+  if (!params.product_id) {
     return (
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Unidades de Portfolio</h1>
@@ -23,7 +25,7 @@ export default function PortfolioUnitsPage({ searchParams }: PortfolioUnitsPageP
     );
   }
   
-  const productId = parseInt(searchParams.product_id, 10);
+  const productId = parseInt(params.product_id, 10);
   
   return <PortfolioUnitsView productId={productId} />
 } 
