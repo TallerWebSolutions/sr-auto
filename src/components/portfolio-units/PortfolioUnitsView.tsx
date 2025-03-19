@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { PortfolioUnitsBoard } from "./PortfolioUnitsBoard"
 import { PortfolioUnitsList } from "./PortfolioUnitsList"
+import { PortfolioUnitsBarChart } from "./PortfolioUnitsBarChart"
 import { ToggleGroup, ToggleButton } from "../ui/toggle-group"
 import { Layout, Table } from "lucide-react"
 import { useQuery } from "@apollo/client"
@@ -74,6 +75,10 @@ export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
 
   const units: PortfolioUnit[] = data?.portfolio_units || [];
 
+  const containerClassName = viewMode === "list" 
+    ? "grid grid-cols-1 md:grid-cols-2 gap-6" 
+    : "grid grid-cols-1 gap-6";
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
@@ -94,28 +99,40 @@ export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
           </ToggleButton>
         </ToggleGroup>
       </div>
-      <div className="grid gap-6">
-        {viewMode === "list" ? (
-          <div className="rounded-lg border p-6">
-            <h2 className="text-xl font-semibold mb-4">Lista de Unidades</h2>
-            <PortfolioUnitsList 
-              units={units} 
-              loading={loading} 
-              error={error}
-              sorting={sorting}
-              onSortChange={setSorting}
-            />
-          </div>
-        ) : (
-          <div className="rounded-lg border p-6">
-            <h2 className="text-xl font-semibold mb-4">Quadro de Unidades</h2>
-            <PortfolioUnitsBoard 
-              units={units}
-              loading={loading}
-              error={error}
-            />
-          </div>
-        )}
+      
+      <div className={containerClassName}>
+        <div className="rounded-lg border p-6">
+          {viewMode === "list" ? (
+            <>
+              <h2 className="text-xl font-semibold mb-4">Lista de Unidades</h2>
+              <PortfolioUnitsList 
+                units={units} 
+                loading={loading} 
+                error={error}
+                sorting={sorting}
+                onSortChange={setSorting}
+              />
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-semibold mb-4">Quadro de Unidades</h2>
+              <PortfolioUnitsBoard 
+                units={units}
+                loading={loading}
+                error={error}
+              />
+            </>
+          )}
+        </div>
+        
+        <div className="rounded-lg border p-6">
+          <h2 className="text-xl font-semibold mb-4">Gráfico de Horas por Unidade</h2>
+          <PortfolioUnitsBarChart
+            units={units}
+            loading={loading}
+            error={error}
+          />
+        </div>
       </div>
     </div>
   )
