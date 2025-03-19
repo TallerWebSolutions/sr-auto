@@ -11,6 +11,14 @@ const GET_PORTFOLIO_UNITS = gql`
       parent_id
       portfolio_unit_type
       id
+      demands_aggregate {
+        aggregate {
+          sum {
+            effort_downstream
+            effort_upstream
+          }
+        }
+      }
     }
   }
 `;
@@ -20,6 +28,14 @@ interface PortfolioUnit {
   parent_id: number | null;
   portfolio_unit_type: number;
   id: number;
+  demands_aggregate: {
+    aggregate: {
+      sum: {
+        effort_downstream: number | null;
+        effort_upstream: number | null;
+      }
+    }
+  }
 }
 
 interface GroupedUnits {
@@ -80,21 +96,30 @@ export function PortfolioUnitsList({ productId }: PortfolioUnitsListProps) {
               <div className="flex-1 overflow-x-scroll">
                 <div className="h-auto">
                   <div className="space-y-2 p-3">
-                    {groupedUnits[parentId].map((unit: PortfolioUnit) => (
-                      <div
-                        key={unit.id}
-                        className="flex items-center justify-between p-2 rounded-md border bg-white hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="font-medium truncate">{unit.name}</div>
-                          <Badge 
-                            variant={portfolioUnitTypeMap[unit.portfolio_unit_type]?.variant || "secondary"}
-                          >
-                            {portfolioUnitTypeMap[unit.portfolio_unit_type]?.label || unit.portfolio_unit_type}
-                          </Badge>
+                    {groupedUnits[parentId].map((unit: PortfolioUnit) => {
+                      const upstreamHours = unit.demands_aggregate.aggregate.sum.effort_upstream || 0;
+                      const downstreamHours = unit.demands_aggregate.aggregate.sum.effort_downstream || 0;
+                      const totalHours = upstreamHours + downstreamHours;
+                      
+                      return (
+                        <div
+                          key={unit.id}
+                          className="flex items-center justify-between p-2 rounded-md border bg-white hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="font-medium truncate">{unit.name}</div>
+                            <Badge 
+                              variant={portfolioUnitTypeMap[unit.portfolio_unit_type]?.variant || "secondary"}
+                            >
+                              {portfolioUnitTypeMap[unit.portfolio_unit_type]?.label || unit.portfolio_unit_type}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {totalHours > 0 ? `${totalHours.toFixed(2)}h` : ''}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
