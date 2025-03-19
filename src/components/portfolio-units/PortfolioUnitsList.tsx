@@ -1,50 +1,16 @@
 'use client'
 
-import { useQuery } from "@apollo/client";
-import { gql } from "@apollo/client";
 import { Badge } from "../ui/badge";
 import { ArrowUpDown } from "lucide-react";
-import { useState } from "react";
-
-const GET_PORTFOLIO_UNITS = gql`
-  query PortfolioUnits($productId: Int!, $orderBy: [portfolio_units_order_by!]) {
-    portfolio_units(
-      where: {product_id: {_eq: $productId}}, 
-      order_by: $orderBy
-    ) {
-      name
-      id
-      portfolio_unit_type
-      demands_aggregate {
-        aggregate {
-          sum {
-            effort_downstream
-            effort_upstream
-            cost_to_project
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface PortfolioUnit {
-  name: string;
-  portfolio_unit_type: number;
-  id: number;
-  demands_aggregate: {
-    aggregate: {
-      sum: {
-        effort_downstream: number | null;
-        effort_upstream: number | null;
-        cost_to_project: number | null;
-      }
-    }
-  }
-}
+import { Dispatch, SetStateAction } from "react";
+import { PortfolioUnit } from "./PortfolioUnitsView";
 
 interface PortfolioUnitsListProps {
-  productId: number;
+  units: PortfolioUnit[];
+  loading: boolean;
+  error?: Error;
+  sorting: { field: 'hours' | 'name', direction: 'asc' | 'desc' };
+  onSortChange: Dispatch<SetStateAction<{ field: 'hours' | 'name', direction: 'asc' | 'desc' }>>;
 }
 
 const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -54,30 +20,10 @@ const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" 
   "4": { label: "Épico", variant: "default" }
 };
 
-export function PortfolioUnitsList({ productId }: PortfolioUnitsListProps) {
-  const [sorting, setSorting] = useState<{ field: 'hours' | 'name', direction: 'asc' | 'desc' }>({
-    field: 'hours',
-    direction: 'asc'
-  });
-
-  const getOrderBy = () => {
-    if (sorting.field === 'name') {
-      return [{ name: sorting.direction }];
-    }
-    return [{}];
-  };
-
-  const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS, {
-    variables: { 
-      productId,
-      orderBy: getOrderBy()
-    }
-  });
-
+export function PortfolioUnitsList({ units, loading, error, sorting, onSortChange }: PortfolioUnitsListProps) {
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro ao carregar unidades</div>;
 
-  const units: PortfolioUnit[] = data?.portfolio_units || [];
   const filteredUnits = units.filter(unit => unit.portfolio_unit_type === 4);
 
   const getTotalHours = (unit: PortfolioUnit): number => {
@@ -95,7 +41,7 @@ export function PortfolioUnitsList({ productId }: PortfolioUnitsListProps) {
   });
 
   const toggleSort = (field: 'hours' | 'name') => {
-    setSorting(current => ({
+    onSortChange(current => ({
       field,
       direction: current.field === field && current.direction === 'desc' ? 'asc' : 'desc'
     }));

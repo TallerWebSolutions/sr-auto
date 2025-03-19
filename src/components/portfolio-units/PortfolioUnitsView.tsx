@@ -5,6 +5,47 @@ import { PortfolioUnitsBoard } from "./PortfolioUnitsBoard"
 import { PortfolioUnitsList } from "./PortfolioUnitsList"
 import { ToggleGroup, ToggleButton } from "../ui/toggle-group"
 import { Layout, Table } from "lucide-react"
+import { useQuery } from "@apollo/client"
+import { gql } from "@apollo/client"
+
+const GET_PORTFOLIO_UNITS = gql`
+  query PortfolioUnits($productId: Int!, $orderBy: [portfolio_units_order_by!]) {
+    portfolio_units(
+      where: {product_id: {_eq: $productId}}, 
+      order_by: $orderBy
+    ) {
+      name
+      id
+      parent_id
+      portfolio_unit_type
+      demands_aggregate {
+        aggregate {
+          sum {
+            effort_downstream
+            effort_upstream
+            cost_to_project
+          }
+        }
+      }
+    }
+  }
+`;
+
+export interface PortfolioUnit {
+  name: string;
+  id: number;
+  parent_id: number | null;
+  portfolio_unit_type: number;
+  demands_aggregate: {
+    aggregate: {
+      sum: {
+        effort_downstream: number | null;
+        effort_upstream: number | null;
+        cost_to_project: number | null;
+      }
+    }
+  }
+}
 
 interface PortfolioUnitsViewProps {
   productId: number;
@@ -12,6 +53,26 @@ interface PortfolioUnitsViewProps {
 
 export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
   const [viewMode, setViewMode] = useState<string>("list")
+  const [sorting, setSorting] = useState<{ field: 'hours' | 'name', direction: 'asc' | 'desc' }>({
+    field: 'hours',
+    direction: 'asc'
+  });
+
+  const getOrderBy = () => {
+    if (sorting.field === 'name') {
+      return [{ name: sorting.direction }];
+    }
+    return [{}];
+  };
+
+  const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS, {
+    variables: { 
+      productId,
+      orderBy: getOrderBy()
+    }
+  });
+
+  const units: PortfolioUnit[] = data?.portfolio_units || [];
 
   return (
     <div className="container mx-auto py-6">
@@ -37,12 +98,22 @@ export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
         {viewMode === "list" ? (
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold mb-4">Lista de Unidades</h2>
-            <PortfolioUnitsList productId={productId} />
+            <PortfolioUnitsList 
+              units={units} 
+              loading={loading} 
+              error={error}
+              sorting={sorting}
+              onSortChange={setSorting}
+            />
           </div>
         ) : (
           <div className="rounded-lg border p-6">
             <h2 className="text-xl font-semibold mb-4">Quadro de Unidades</h2>
-            <PortfolioUnitsBoard productId={productId} />
+            <PortfolioUnitsBoard 
+              units={units}
+              loading={loading}
+              error={error}
+            />
           </div>
         )}
       </div>

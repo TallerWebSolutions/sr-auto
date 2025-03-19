@@ -1,51 +1,16 @@
 'use client'
 
-import { useQuery } from "@apollo/client";
-import { gql } from "@apollo/client";
 import { Badge } from "../ui/badge";
+import { PortfolioUnit } from "./PortfolioUnitsView";
 
-const GET_PORTFOLIO_UNITS = gql`
-  query PortfolioUnits($productId: Int!) {
-    portfolio_units(where: {product_id: {_eq: $productId}}) {
-      name
-      parent_id
-      portfolio_unit_type
-      id
-      demands_aggregate {
-        aggregate {
-          sum {
-            effort_downstream
-            effort_upstream
-            cost_to_project
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface PortfolioUnit {
-  name: string;
-  parent_id: number | null;
-  portfolio_unit_type: number;
-  id: number;
-  demands_aggregate: {
-    aggregate: {
-      sum: {
-        effort_downstream: number | null;
-        effort_upstream: number | null;
-        cost_to_project: number | null;
-      }
-    }
-  }
+interface PortfolioUnitsBoardProps {
+  units: PortfolioUnit[];
+  loading: boolean;
+  error?: Error;
 }
 
 interface GroupedUnits {
   [key: string]: PortfolioUnit[];
-}
-
-interface PortfolioUnitsBoardProps {
-  productId: number;
 }
 
 const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -55,15 +20,10 @@ const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" 
   "4": { label: "Épico", variant: "default" }
 };
 
-export function PortfolioUnitsBoard({ productId }: PortfolioUnitsBoardProps) {
-  const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS, {
-    variables: { productId }
-  });
-
+export function PortfolioUnitsBoard({ units, loading, error }: PortfolioUnitsBoardProps) {
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro ao carregar unidades</div>;
 
-  const units: PortfolioUnit[] = data?.portfolio_units || [];
   const groupedUnits = units.reduce((acc: GroupedUnits, unit: PortfolioUnit) => {
     if (unit.parent_id) {
       if (!acc[unit.parent_id]) {
