@@ -15,6 +15,7 @@ const GET_PORTFOLIO_UNITS = gql`
           sum {
             effort_downstream
             effort_upstream
+            cost_to_project
           }
         }
       }
@@ -31,6 +32,7 @@ interface PortfolioUnit {
       sum: {
         effort_downstream: number | null;
         effort_upstream: number | null;
+        cost_to_project: number | null;
       }
     }
   }
@@ -74,6 +76,7 @@ export function PortfolioUnitsTable({ productId }: PortfolioUnitsTableProps) {
             const upstreamHours = unit.demands_aggregate.aggregate.sum.effort_upstream || 0;
             const downstreamHours = unit.demands_aggregate.aggregate.sum.effort_downstream || 0;
             const totalHours = upstreamHours + downstreamHours;
+            const totalCost = unit.demands_aggregate.aggregate.sum.cost_to_project || 0;
             
             return (
               <tr key={unit.id} className="border-t hover:bg-gray-50">
@@ -85,7 +88,7 @@ export function PortfolioUnitsTable({ productId }: PortfolioUnitsTableProps) {
                     {portfolioUnitTypeMap[unit.portfolio_unit_type]?.label || unit.portfolio_unit_type}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-sm text-right">-</td>
+                <td className="px-4 py-3 text-sm text-right">{totalCost > 0 ? `R$ ${totalCost.toFixed(2)}` : '-'}</td>
                 <td className="px-4 py-3 text-sm text-right">{totalHours > 0 ? totalHours.toFixed(2) : '-'}</td>
               </tr>
             );
