@@ -33,11 +33,8 @@ export function PortfolioUnitsBarChart({ units, loading, error }: PortfolioUnits
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro ao carregar unidades</div>;
 
-  // Filter for epics (type 4) as in the list view
-  const filteredUnits = units.filter(unit => unit.portfolio_unit_type === 4);
-
   // Calculate total hours for each unit
-  const processedUnits = filteredUnits.map(unit => {
+  const processedUnits = units.map(unit => {
     const upstreamHours = unit.demands_aggregate.aggregate.sum.effort_upstream || 0;
     const downstreamHours = unit.demands_aggregate.aggregate.sum.effort_downstream || 0;
     const totalHours = upstreamHours + downstreamHours;

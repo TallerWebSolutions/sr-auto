@@ -10,9 +10,12 @@ import { useQuery } from "@apollo/client"
 import { gql } from "@apollo/client"
 
 const GET_PORTFOLIO_UNITS = gql`
-  query PortfolioUnits($productId: Int!, $orderBy: [portfolio_units_order_by!]) {
+  query PortfolioUnits($productId: Int!, $orderBy: [portfolio_units_order_by!], $portfolioUnitType: Int) {
     portfolio_units(
-      where: {product_id: {_eq: $productId}}, 
+      where: {
+        product_id: {_eq: $productId}, 
+        portfolio_unit_type: {_eq: $portfolioUnitType}
+      }, 
       order_by: $orderBy
     ) {
       name
@@ -48,12 +51,20 @@ export interface PortfolioUnit {
   }
 }
 
+const portfolioUnitTypeMap: Record<string, { label: string; variant?: "default" | "secondary" | "destructive" | "outline" }> = {
+  "0": { label: "Módulo de Produto", variant: "secondary" },
+  "1": { label: "Estágio de Jornada", variant: "outline" },
+  "2": { label: "Tema", variant: "destructive" },
+  "4": { label: "Épico", variant: "default" }
+};
+
 interface PortfolioUnitsViewProps {
   productId: number;
 }
 
 export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
   const [viewMode, setViewMode] = useState<string>("list")
+  const [portfolioUnitType, setPortfolioUnitType] = useState<number>(4)
   const [sorting, setSorting] = useState<{ field: 'hours' | 'name', direction: 'asc' | 'desc' }>({
     field: 'hours',
     direction: 'asc'
@@ -69,7 +80,8 @@ export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
   const { data, loading, error } = useQuery(GET_PORTFOLIO_UNITS, {
     variables: { 
       productId,
-      orderBy: getOrderBy()
+      orderBy: getOrderBy(),
+      portfolioUnitType
     }
   });
 
@@ -83,21 +95,33 @@ export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Unidades de Portfolio</h1>
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={setViewMode}
-          className="ml-auto"
-        >
-          <ToggleButton value="list" aria-label="Visualização de tabela">
-            <Table className="h-4 w-4 mr-2" />
-            Lista
-          </ToggleButton>
-          <ToggleButton value="board" aria-label="Visualização de quadro">
-            <Layout className="h-4 w-4 mr-2" />
-            Quadro
-          </ToggleButton>
-        </ToggleGroup>
+        <div className="flex gap-4 items-center">
+          <select
+            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
+            value={portfolioUnitType}
+            onChange={(e) => setPortfolioUnitType(parseInt(e.target.value))}
+          >
+            {Object.entries(portfolioUnitTypeMap).map(([value, { label }]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={setViewMode}
+          >
+            <ToggleButton value="list" aria-label="Visualização de tabela">
+              <Table className="h-4 w-4 mr-2" />
+              Lista
+            </ToggleButton>
+            <ToggleButton value="board" aria-label="Visualização de quadro">
+              <Layout className="h-4 w-4 mr-2" />
+              Quadro
+            </ToggleButton>
+          </ToggleGroup>
+        </div>
       </div>
       
       <div className={containerClassName}>

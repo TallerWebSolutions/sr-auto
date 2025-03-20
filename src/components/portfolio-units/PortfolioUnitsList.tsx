@@ -24,27 +24,31 @@ export function PortfolioUnitsList({ units, loading, error, sorting, onSortChang
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro ao carregar unidades</div>;
 
-  const filteredUnits = units.filter(unit => unit.portfolio_unit_type === 4);
-
   const getTotalHours = (unit: PortfolioUnit): number => {
     const upstreamHours = unit.demands_aggregate.aggregate.sum.effort_upstream || 0;
     const downstreamHours = unit.demands_aggregate.aggregate.sum.effort_downstream || 0;
     return upstreamHours + downstreamHours;
   };
 
-  const sortedUnits = [...filteredUnits].sort((a, b) => {
+  const sortedUnits = [...units].sort((a, b) => {
     if (sorting.field === 'hours') {
       const multiplier = sorting.direction === 'desc' ? -1 : 1;
       return (getTotalHours(b) - getTotalHours(a)) * multiplier;
+    } else {
+      const multiplier = sorting.direction === 'desc' ? -1 : 1;
+      return multiplier * (a.name.localeCompare(b.name));
     }
-    return 0;
   });
 
   const toggleSort = (field: 'hours' | 'name') => {
-    onSortChange(current => ({
-      field,
-      direction: current.field === field && current.direction === 'desc' ? 'asc' : 'desc'
-    }));
+    if (sorting.field === field) {
+      onSortChange({
+        field,
+        direction: sorting.direction === 'asc' ? 'desc' : 'asc'
+      });
+    } else {
+      onSortChange({ field, direction: 'asc' });
+    }
   };
   
   return (
