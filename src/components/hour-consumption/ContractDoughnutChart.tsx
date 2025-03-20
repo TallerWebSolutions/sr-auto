@@ -7,6 +7,7 @@ interface ContractDoughnutChartProps {
   hoursRemaining: number;
   contractTotalHours: number;
   hoursUsedPercentage: number;
+  activeContractsCount?: number;
 }
 
 export function ContractDoughnutChart({
@@ -14,6 +15,7 @@ export function ContractDoughnutChart({
   hoursRemaining,
   contractTotalHours,
   hoursUsedPercentage,
+  activeContractsCount = 1,
 }: ContractDoughnutChartProps) {
   const contractChartData = {
     labels: ['Horas Utilizadas', 'Horas Restantes'],
@@ -56,9 +58,17 @@ export function ContractDoughnutChart({
     cutout: '70%',
   };
 
+  const contractTitle = activeContractsCount > 1 ? 
+    `Consumo dos ${activeContractsCount} Contratos` : 
+    'Consumo do Contrato';
+
+  const hoursText = activeContractsCount > 1 ? 
+    `${hoursRemaining.toFixed(0)} horas restantes de ${contractTotalHours} horas contratadas (soma total)` :
+    `${hoursRemaining.toFixed(0)} horas restantes de ${contractTotalHours} horas contratadas`;
+
   return (
     <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-sm">
-      <h2 className="text-xl font-bold text-blue-900 mb-4">Consumo do Contrato</h2>
+      <h2 className="text-xl font-bold text-blue-900 mb-4">{contractTitle}</h2>
       <div className="bg-white p-3 rounded-lg h-80 flex items-center justify-center">
         <div className="w-64 h-64 relative">
           <Doughnut options={contractChartOptions} data={contractChartData} />
@@ -71,7 +81,7 @@ export function ContractDoughnutChart({
         </div>
       </div>
       <p className="text-xs text-green-700 mt-3 text-center">
-        {hoursRemaining.toFixed(0)} horas restantes de {contractTotalHours} horas contratadas
+        {hoursText}
       </p>
     </div>
   );

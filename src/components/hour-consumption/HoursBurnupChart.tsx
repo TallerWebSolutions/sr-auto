@@ -165,7 +165,7 @@ export function HoursBurnupChart({
           <p className="text-orange-600 mb-4">Horas necessárias segundo o progresso ideal</p>
           <div className="flex flex-col items-center bg-white p-4 rounded-lg shadow-sm">
             <span className={`text-3xl font-bold ${hoursNeeded < 0 ? 'text-red-600' : 'text-orange-700'}`}>
-              {Math.abs(hoursNeeded)}
+              {Math.abs(hoursNeeded).toFixed(0)}
             </span>
             <span className="text-sm text-gray-500 mt-2">horas</span>
             {hoursNeeded < 0 && (
@@ -176,7 +176,7 @@ export function HoursBurnupChart({
           </div>
           <p className="text-orange-600 text-sm mt-4 text-center">
             {hoursNeeded < 0 
-              ? `Excedeu em ${Math.abs(hoursNeeded)} horas o progresso ideal.` 
+              ? `Excedeu em ${Math.abs(hoursNeeded).toFixed(0)} horas o progresso ideal.` 
               : `Baseado na distribuição ideal de ${contractTotalHours} horas ao longo de ${weeklyHoursData.length} semanas.`
             }
           </p>

@@ -9,6 +9,7 @@ interface HourConsumptionSummaryProps {
   contractStartDate?: string;
   contractEndDate?: string;
   formatDate: (dateString: string) => string;
+  activeContractsCount: number;
 }
 
 export function HourConsumptionSummary({
@@ -18,20 +19,25 @@ export function HourConsumptionSummary({
   contractStartDate,
   contractEndDate,
   formatDate,
+  activeContractsCount,
 }: HourConsumptionSummaryProps) {
   const hoursUsedPercentage = (totalHoursConsumed / contractTotalHours) * 100;
   const hoursRemaining = contractTotalHours - totalHoursConsumed;
   
-  const contractDateRange = contractStartDate && contractEndDate
-    ? formatDate(contractStartDate) + " a " + formatDate(contractEndDate)
-    : "Nenhum";
+  let contractSubtitle = "Nenhum contrato ativo";
+  
+  if (activeContractsCount > 1) {
+    contractSubtitle = `${activeContractsCount} contratos ativos (soma total)`;
+  } else if (contractStartDate && contractEndDate) {
+    contractSubtitle = `Contrato ativo: ${formatDate(contractStartDate)} a ${formatDate(contractEndDate)}`;
+  }
     
   return (
     <div className="grid gap-6 md:grid-cols-3 mb-6">
       <div className="grid gap-6 md:grid-cols-1 mb-6">
         <MetricCard
           title="Horas Disponíveis no Contrato"
-          subtitle={`Contrato ativo: ${contractDateRange}`}
+          subtitle={contractSubtitle}
           value={contractTotalHours}
           unit="horas"
           color="green"
@@ -51,6 +57,7 @@ export function HourConsumptionSummary({
         hoursRemaining={hoursRemaining}
         contractTotalHours={contractTotalHours}
         hoursUsedPercentage={hoursUsedPercentage}
+        activeContractsCount={activeContractsCount}
       />
 
       <MetricCard

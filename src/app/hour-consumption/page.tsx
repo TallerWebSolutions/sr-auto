@@ -27,6 +27,7 @@ import {
   formatDate,
   processDemandsData,
   getActiveContract,
+  getTotalHoursFromAllContracts,
   processWeeklyHoursData,
   getCurrentWeekIndex,
   calculateHoursNeeded,
@@ -73,21 +74,19 @@ interface ContractsResponse {
   }[];
 }
 
-const getCustomerDemandsQuery = (
+const buildCustomerDemandsQuery = (
   customerId: string | null,
   contractId: string | null
 ) => {
-  let whereClause = `{customer_id: {_eq: ${customerId}}`;
-
-  if (contractId && contractId !== "0") {
-    whereClause += `, contract_id: {_eq: ${contractId}}`;
-  }
-
-  whereClause += `}`;
+  const filterConditions = `{customer_id: {_eq: ${customerId}}${
+    contractId && contractId !== "0"
+      ? `, contract_id: {_eq: ${contractId}}`
+      : ""
+  }}`;
 
   return gql`
     query CustomerDemandsQuery {
-      demands(where: ${whereClause}) {
+      demands(where: ${filterConditions}) {
         id
         slug
         demand_title
@@ -107,7 +106,7 @@ const getCustomerDemandsQuery = (
   `;
 };
 
-const getContractsQuery = (customerId: string | null) => gql`
+const buildContractsQuery = (customerId: string | null) => gql`
   query ContractsQuery {
     contracts(where: {customer_id: {_eq: ${customerId}}}) {
       id
@@ -117,6 +116,41 @@ const getContractsQuery = (customerId: string | null) => gql`
     }
   }
 `;
+
+const findEarliestStartDate = (
+  contractsData: ContractsResponse | undefined
+) => {
+  if (!contractsData?.contracts || contractsData.contracts.length === 0) {
+    return undefined;
+  }
+
+  return contractsData.contracts
+    .reduce((earliest, contract) => {
+      const contractStart = new Date(contract.start_date);
+      return contractStart < earliest ? contractStart : earliest;
+    }, new Date(contractsData.contracts[0].start_date))
+    .toISOString()
+    .split("T")[0];
+};
+
+const findLatestEndDate = (contractsData: ContractsResponse | undefined) => {
+  if (!contractsData?.contracts || contractsData.contracts.length === 0) {
+    return undefined;
+  }
+
+  let latestDate = new Date(contractsData.contracts[0].end_date);
+  let latestEndDate = contractsData.contracts[0].end_date;
+
+  for (const contract of contractsData.contracts) {
+    const currentEndDate = new Date(contract.end_date);
+    if (currentEndDate > latestDate) {
+      latestDate = currentEndDate;
+      latestEndDate = contract.end_date;
+    }
+  }
+
+  return latestEndDate;
+};
 
 export default function HourConsumptionPage() {
   const searchParams = useSearchParams();
@@ -129,7 +163,7 @@ export default function HourConsumptionPage() {
     error: demandsError,
     data: demandsData,
   } = useQuery<DemandsResponse>(
-    getCustomerDemandsQuery(customerId, contractId),
+    buildCustomerDemandsQuery(customerId, contractId),
     {
       fetchPolicy: "network-only",
       skip: isCustomerIdEmpty,
@@ -140,13 +174,13 @@ export default function HourConsumptionPage() {
     loading: contractsLoading,
     error: contractsError,
     data: contractsData,
-  } = useQuery<ContractsResponse>(getContractsQuery(customerId), {
+  } = useQuery<ContractsResponse>(buildContractsQuery(customerId), {
     fetchPolicy: "network-only",
     skip: isCustomerIdEmpty,
   });
 
-  const loading = demandsLoading || contractsLoading;
-  const error = demandsError || contractsError;
+  const isLoading = demandsLoading || contractsLoading;
+  const hasError = demandsError || contractsError;
 
   if (isCustomerIdEmpty) {
     return (
@@ -162,33 +196,59 @@ export default function HourConsumptionPage() {
   const { allCustomerDemands, completedDemands, totalHoursConsumed, hpd } =
     processDemandsData(demandsData);
 
-  const activeContract =
+  const selectedContract =
     contractId && contractId !== "0"
       ? contractsData?.contracts.find(
           (contract) => contract.id.toString() === contractId
         )
       : getActiveContract(contractsData);
 
-  const contractTotalHours = activeContract?.total_hours || 0;
+  const totalContractHours =
+    contractId && contractId !== "0"
+      ? selectedContract?.total_hours || 0
+      : getTotalHoursFromAllContracts(contractsData);
 
-  const weeklyHoursData = processWeeklyHoursData(demandsData, activeContract);
+  const currentDate = new Date();
+  const activeContracts =
+    contractsData?.contracts.filter((contract) => {
+      const startDate = new Date(contract.start_date);
+      const endDate = new Date(contract.end_date);
+      return startDate <= currentDate && endDate >= currentDate;
+    }) || [];
+  const activeContractsCount = activeContracts.length;
+
+  const globalStartDate = findEarliestStartDate(contractsData);
+  const globalEndDate = findLatestEndDate(contractsData);
+
+  const dateRangeForProcessing = selectedContract
+    ? selectedContract
+    : {
+        start_date: globalStartDate || "",
+        end_date: globalEndDate || "",
+      };
+
+  const weeklyHoursData = processWeeklyHoursData(
+    demandsData,
+    dateRangeForProcessing,
+    totalContractHours
+  );
 
   const currentWeekIndex = getCurrentWeekIndex(weeklyHoursData);
 
   const hoursNeeded = calculateHoursNeeded(
     weeklyHoursData,
     currentWeekIndex,
-    contractTotalHours
+    totalContractHours
   );
 
   const monthlyChartData = prepareMonthlyChartData(completedDemands);
 
-  if (loading) {
+  if (isLoading) {
     return <LoadingState />;
   }
 
-  if (error) {
-    return <ErrorState error={error} />;
+  if (hasError) {
+    return <ErrorState error={hasError} />;
   }
 
   return (
@@ -201,9 +261,14 @@ export default function HourConsumptionPage() {
               - {demandsData.customers_by_pk.name}
             </span>
           )}
-          {contractId && contractId !== "0" && activeContract && (
+          {contractId && contractId !== "0" && selectedContract && (
             <span className="ml-2 text-green-600">
               - Contrato #{contractId}
+            </span>
+          )}
+          {(!contractId || contractId === "0") && activeContractsCount > 1 && (
+            <span className="ml-2 text-green-600">
+              - {activeContractsCount} Contratos Ativos
             </span>
           )}
         </h1>
@@ -221,19 +286,20 @@ export default function HourConsumptionPage() {
           <HourConsumptionSummary
             totalHoursConsumed={totalHoursConsumed}
             hpd={hpd}
-            contractTotalHours={contractTotalHours}
-            contractStartDate={activeContract?.start_date}
-            contractEndDate={activeContract?.end_date}
+            contractTotalHours={totalContractHours}
+            contractStartDate={globalStartDate}
+            contractEndDate={globalEndDate}
             formatDate={formatDate}
+            activeContractsCount={activeContractsCount}
           />
 
           <HoursBurnupChart
             weeklyHoursData={weeklyHoursData}
             currentWeekIndex={currentWeekIndex}
             hoursNeeded={hoursNeeded}
-            contractTotalHours={contractTotalHours}
-            startDate={activeContract?.start_date}
-            endDate={activeContract?.end_date}
+            contractTotalHours={totalContractHours}
+            startDate={globalStartDate}
+            endDate={globalEndDate}
             formatDate={formatDate}
           />
 

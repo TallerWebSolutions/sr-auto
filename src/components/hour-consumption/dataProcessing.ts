@@ -90,10 +90,26 @@ export function getActiveContract(contractsData: ContractsData | undefined) {
   });
 }
 
-// Process weekly hours data for burnup chart
+// Get total hours from all active contracts
+export function getTotalHoursFromAllContracts(contractsData: ContractsData | undefined) {
+  if (!contractsData?.contracts || contractsData.contracts.length === 0) {
+    return 0;
+  }
+
+  const now = new Date();
+  const activeContracts = contractsData.contracts.filter(contract => {
+    const startDate = new Date(contract.start_date);
+    const endDate = new Date(contract.end_date);
+    return startDate <= now && endDate >= now;
+  });
+
+  return activeContracts.reduce((total, contract) => total + contract.total_hours, 0);
+}
+
 export function processWeeklyHoursData(
   demandsData: DemandsData | undefined,
-  activeContract: { start_date: string; end_date: string; total_hours: number } | undefined,
+  activeContract: { start_date: string; end_date: string } | undefined,
+  totalContractHours: number = 0
 ): WeeklyHoursData[] {
   if (!demandsData?.demands || demandsData.demands.length === 0 || !activeContract) {
     return [];
@@ -103,18 +119,17 @@ export function processWeeklyHoursData(
   const earliestDate = new Date(activeContract.start_date);
   const latestDate = new Date(activeContract.end_date);
 
-  // 1. Generate all weeks between start and end dates
   const weeks: WeeklyHoursData[] = [];
-  const currentWeek = getWeekNumber(earliestDate);
-  const endWeek = getWeekNumber(latestDate);
+  const [startWeekNum, startYear] = getWeekNumber(earliestDate);
+  const [endWeekNum, endYear] = getWeekNumber(latestDate);
   
-  let currentYear = currentWeek[1];
-  let weekNum = currentWeek[0];
+  let currentYear = startYear;
+  let weekNum = startWeekNum;
   
-  while (currentYear < endWeek[1] || (currentYear === endWeek[1] && weekNum <= endWeek[0])) {
+  do {
     weeks.push({
       weekLabel: formatWeekLabel(weekNum, currentYear),
-      totalHours: activeContract.total_hours,
+      totalHours: totalContractHours,
       consumedHours: 0
     });
     
@@ -123,55 +138,49 @@ export function processWeeklyHoursData(
       weekNum = 1;
       currentYear++;
     }
+  } while (currentYear < endYear || (currentYear === endYear && weekNum <= endWeekNum));
+
+  const lastWeekLabel = formatWeekLabel(endWeekNum, endYear);
+  if (weeks[weeks.length - 1].weekLabel !== lastWeekLabel) {
+    weeks.push({
+      weekLabel: lastWeekLabel,
+      totalHours: totalContractHours,
+      consumedHours: 0
+    });
   }
 
-  // 2. Calculate hours consumed per week for each demand
   const weeklyHours: { [weekLabel: string]: number } = {};
   
-  // Initialize all weeks with zero hours
   weeks.forEach(week => {
     weeklyHours[week.weekLabel] = 0;
   });
   
-  // Distribute hours for each demand to the corresponding week
   demandsData.demands.forEach(demand => {
-    // Calculate hours consumed for this demand
     const effortUpstream = demand.effort_upstream || 0;
     const effortDownstream = demand.effort_downstream || 0;
     const hoursConsumed = effortUpstream + effortDownstream;
     
-    if (hoursConsumed <= 0) return; // Skip demands with no hours
+    if (hoursConsumed <= 0) return;
     
-    // Determine the week for this demand
     let demandDate;
     if (demand.end_date) {
-      // If the demand was completed, use the completion date
       demandDate = new Date(demand.end_date);
     } else if (demand.commitment_date) {
-      // If not completed but has a commitment date, use that date
       demandDate = new Date(demand.commitment_date);
     } else {
-      // If no date, use the current date
       demandDate = currentDate;
     }
     
-    // Get the week for this date
     const [weekNum, year] = getWeekNumber(demandDate);
     const weekLabel = formatWeekLabel(weekNum, year);
     
-    // Add hours to the corresponding week if it exists in our period
     if (weeklyHours[weekLabel] !== undefined) {
       weeklyHours[weekLabel] += hoursConsumed;
-    } else {
-      // If the week doesn't exist in our period (it's before the project start),
-      // add the hours to the first week
-      if (weeks.length > 0) {
-        weeklyHours[weeks[0].weekLabel] += hoursConsumed;
-      }
+    } else if (weeks.length > 0) {
+      weeklyHours[weeks[0].weekLabel] += hoursConsumed;
     }
   });
 
-  // 3. Calculate accumulated hours per week
   let accumulatedHours = 0;
   weeks.forEach(week => {
     accumulatedHours += weeklyHours[week.weekLabel];
@@ -213,22 +222,29 @@ export function getCurrentWeekIndex(weeklyHoursData: WeeklyHoursData[]): number 
   return weeklyHoursData.length - 1;
 }
 
-// Calculate hours needed to reach ideal progress
 export function calculateHoursNeeded(
   weeklyHoursData: WeeklyHoursData[],
   currentWeekIndex: number,
   contractTotalHours: number
 ): number {
-  if (weeklyHoursData.length === 0 || currentWeekIndex === -1) return 0;
-  
-  const totalWeeks = weeklyHoursData.length;
-  const idealProgress = (contractTotalHours / totalWeeks) * (currentWeekIndex + 1);
-  const currentConsumedHours = weeklyHoursData[currentWeekIndex].consumedHours;
-  
-  return Math.ceil(idealProgress - currentConsumedHours);
+  if (
+    weeklyHoursData.length === 0 ||
+    currentWeekIndex < 0 ||
+    currentWeekIndex >= weeklyHoursData.length
+  ) {
+    return 0;
+  }
+
+  const currentConsumedHours =
+    weeklyHoursData[currentWeekIndex].consumedHours;
+
+  const hoursRemaining = contractTotalHours - currentConsumedHours;
+
+  const weeksRemaining = weeklyHoursData.length - currentWeekIndex;
+
+  return weeksRemaining > 0 ? hoursRemaining / weeksRemaining : 0;
 }
 
-// Group demands by month for chart
 export function groupDemandsByMonth(completedDemands: DemandWithHours[]) {
   const grouped: Record<string, { totalHours: number, count: number }> = {};
 
