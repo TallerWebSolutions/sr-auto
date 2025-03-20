@@ -8,6 +8,13 @@ import { ToggleGroup, ToggleButton } from "../ui/toggle-group"
 import { Layout, Table } from "lucide-react"
 import { useQuery } from "@apollo/client"
 import { gql } from "@apollo/client"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const GET_PORTFOLIO_UNITS = gql`
   query PortfolioUnits($productId: Int!, $orderBy: [portfolio_units_order_by!], $portfolioUnitType: Int) {
@@ -96,17 +103,21 @@ export function PortfolioUnitsView({ productId }: PortfolioUnitsViewProps) {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Unidades de Portfolio</h1>
         <div className="flex gap-4 items-center">
-          <select
-            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
-            value={portfolioUnitType}
-            onChange={(e) => setPortfolioUnitType(parseInt(e.target.value))}
+          <Select
+            value={portfolioUnitType.toString()}
+            onValueChange={(value) => setPortfolioUnitType(parseInt(value))}
           >
-            {Object.entries(portfolioUnitTypeMap).map(([value, { label }]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Selecione o tipo de unidade" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(portfolioUnitTypeMap).map(([value, { label }]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <ToggleGroup
             type="single"
             value={viewMode}
