@@ -5,6 +5,19 @@ import { useSearchParams } from "next/navigation";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import { DemandCard } from "@/components/ui/DemandCard";
 import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+// Add style for rotated text
+const styles = {
+  rotate270: {
+    transform: "rotate(270deg)",
+    transformOrigin: "center",
+    whiteSpace: "nowrap",
+    marginTop: "50px",
+    marginBottom: "50px",
+    textAlign: "center" as const
+  }
+};
 
 interface BoardDemand {
   id: string;
@@ -73,6 +86,19 @@ export default function BoardPage() {
     "Descartado": []
   });
   const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [minimizedColumns, setMinimizedColumns] = useState<string[]>([]);
+
+  const toggleColumnMinimized = (columnName: string) => {
+    setMinimizedColumns(prev => 
+      prev.includes(columnName) 
+        ? prev.filter(col => col !== columnName) 
+        : [...prev, columnName]
+    );
+  };
+  
+  const isColumnMinimized = (columnName: string) => {
+    return minimizedColumns.includes(columnName);
+  };
 
   const { loading, error, data } = useQuery<BoardResponse>(BOARD_DEMANDS_QUERY(customerId), {
     fetchPolicy: "network-only",
@@ -183,6 +209,101 @@ export default function BoardPage() {
     );
   }
 
+  const renderColumn = (columnName: string, demands: BoardDemand[]) => {
+    const isMinimized = isColumnMinimized(columnName);
+    
+    if (isMinimized) {
+      return (
+        <div className="bg-gray-100 p-2 rounded-lg flex flex-col items-center justify-between" style={{ width: '40px', minHeight: '300px' }}>
+          <button 
+            onClick={() => toggleColumnMinimized(columnName)}
+            className="mb-2 p-1 rounded-full hover:bg-gray-200 mt-2"
+            title={`Expandir ${columnName}`}
+          >
+            <ChevronRight size={18} />
+          </button>
+          
+          <div className="flex-grow flex flex-col justify-center">
+            <div style={styles.rotate270} className="font-semibold text-xs">{columnName}</div>
+          </div>
+          
+          <div className="mb-2 mt-auto font-semibold text-xs">({demands.length})</div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="bg-gray-100 p-4 rounded-lg flex-1">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-center flex-1">{columnName} ({demands.length})</h2>
+          <button 
+            onClick={() => toggleColumnMinimized(columnName)}
+            className="p-1 rounded-full hover:bg-gray-200"
+            title={`Minimizar ${columnName}`}
+          >
+            <ChevronLeft size={16} />
+          </button>
+        </div>
+        <div className="space-y-4">
+          {columnName === "Concluídas" ? (
+            <>
+              {demands
+                .filter(demand => {
+                  if (showAllCompleted) return true;
+                  if (!demand.end_date) return false;
+                  const twoWeeksAgo = new Date();
+                  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+                  return new Date(demand.end_date) >= twoWeeksAgo;
+                })
+                .map(demand => (
+                  <DemandCard 
+                    key={demand.id}
+                    demand={demand}
+                  />
+                ))
+              }
+              {!showAllCompleted && demands.some(demand => {
+                if (!demand.end_date) return false;
+                const twoWeeksAgo = new Date();
+                twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+                return new Date(demand.end_date) < twoWeeksAgo;
+              }) && (
+                <button 
+                  className="w-full p-2 mt-4 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                  onClick={() => setShowAllCompleted(true)}
+                >
+                  Mostrar todas as concluídas
+                </button>
+              )}
+              {showAllCompleted && (
+                <button 
+                  className="w-full p-2 mt-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                  onClick={() => setShowAllCompleted(false)}
+                >
+                  Mostrar apenas recentes
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              {demands.map(demand => (
+                <DemandCard 
+                  key={demand.id}
+                  demand={demand}
+                />
+              ))}
+              {demands.length === 0 && (
+                <div className="text-center p-4 text-gray-500">
+                  Nenhuma demanda
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
@@ -191,71 +312,15 @@ export default function BoardPage() {
         </h1>
         {isCustomerIdEmpty && <ParameterSelectionButtons parameterName="customer_id" />}
       </div>
-
-      <div className="grid grid-cols-5 gap-4 mb-8">
+      
+      <div className="flex gap-4 mb-8 items-stretch">
         {Object.entries(groupedDemands)
           .filter(([status]) => status !== "Descartado")
-          .map(([status, demands]) => (
-          <div key={status} className="bg-gray-100 p-4 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4 text-center">{status} ({demands.length})</h2>
-            <div className="space-y-4">
-              {status === "Concluídas" ? (
-                <>
-                  {demands
-                    .filter(demand => {
-                      if (showAllCompleted) return true;
-                      if (!demand.end_date) return false;
-                      const twoWeeksAgo = new Date();
-                      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-                      return new Date(demand.end_date) >= twoWeeksAgo;
-                    })
-                    .map(demand => (
-                      <DemandCard 
-                        key={demand.id}
-                        demand={demand}
-                      />
-                    ))
-                  }
-                  {!showAllCompleted && demands.some(demand => {
-                    if (!demand.end_date) return false;
-                    const twoWeeksAgo = new Date();
-                    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-                    return new Date(demand.end_date) < twoWeeksAgo;
-                  }) && (
-                    <button 
-                      className="w-full p-2 mt-4 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                      onClick={() => setShowAllCompleted(true)}
-                    >
-                      Mostrar todas as concluídas
-                    </button>
-                  )}
-                  {showAllCompleted && (
-                    <button 
-                      className="w-full p-2 mt-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
-                      onClick={() => setShowAllCompleted(false)}
-                    >
-                      Mostrar apenas recentes
-                    </button>
-                  )}
-                </>
-              ) : (
-                <>
-                  {demands.map(demand => (
-                    <DemandCard 
-                      key={demand.id}
-                      demand={demand}
-                    />
-                  ))}
-                  {demands.length === 0 && (
-                    <div className="text-center p-4 text-gray-500">
-                      Nenhuma demanda
-                    </div>
-                  )}
-                </>
-              )}
+          .map(([columnName, demands]) => (
+            <div key={columnName} className={isColumnMinimized(columnName) ? "" : "flex-1"}>
+              {renderColumn(columnName, demands)}
             </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       <div className="bg-gray-100 p-4 rounded-lg">
