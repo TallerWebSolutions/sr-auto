@@ -5,22 +5,35 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useSearchParams } from "next/navigation";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import Link from "next/link";
+import { useState } from "react";
 
 interface PriorizacaoResponse {
-  demands: {
-    id: string;
-    slug: string;
-    demand_title: string;
-    work_item_type_id: number | null;
-    stage: {
-      name: string;
-    } | null;
-    discarded_at: string | null;
-    commitment_date: string | null;
-  }[];
+  demands: Demand[];
   projects_by_pk?: {
     name: string;
   };
+}
+
+interface Demand {
+  id: string;
+  slug: string;
+  demand_title: string;
+  work_item_type_id: number | null;
+  stage: {
+    name: string;
+  } | null;
+  discarded_at: string | null;
+  commitment_date: string | null;
+}
+
+interface DemandWithScores extends Demand {
+  scores: {
+    retencao: number;
+    aquisicao: number;
+    interacao: number;
+    ftds: number;
+    total: number;
+  }
 }
 
 const workItemTypeConfig: Record<number, { name: string; color: string }> = {
@@ -99,6 +112,32 @@ const WorkItemType = ({ typeId }: { typeId: number | null }) => {
   );
 };
 
+const StarRating = ({ value, onChange }: { value: number, onChange: (newValue: number) => void }) => {
+  const handleClick = (rating: number) => {
+    onChange(rating);
+  };
+
+  return (
+    <div className="flex items-center">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          onClick={() => handleClick(star)}
+          className="focus:outline-none"
+        >
+          <svg
+            className={`h-5 w-5 ${star <= value ? 'text-yellow-500 fill-current' : 'text-gray-300 fill-current'}`}
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+          </svg>
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const EmptyState = () => (
   <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200">
     <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -161,6 +200,10 @@ export default function PriorizacaoPage() {
     skip: isProjectIdEmpty
   });
 
+  const [demandsWithScores, setDemandsWithScores] = useState<DemandWithScores[]>([]);
+  const [displayDemands, setDisplayDemands] = useState<DemandWithScores[]>([]);
+  const [isSorted, setIsSorted] = useState(false);
+
   if (isProjectIdEmpty) {
     return (
       <main className="container mx-auto p-4">
@@ -176,10 +219,89 @@ export default function PriorizacaoPage() {
   const demands = data?.demands || [];
   const projectName = data?.projects_by_pk?.name;
 
-  const filteredDemands = demands.filter(demand => {
+  // Initialize scores if not already done
+  if (demandsWithScores.length === 0 && demands.length > 0) {
+    const initializedDemands = demands.map(demand => ({
+      ...demand,
+      scores: {
+        retencao: 0,
+        aquisicao: 0,
+        interacao: 0,
+        ftds: 0,
+        total: 0
+      }
+    }));
+    setDemandsWithScores(initializedDemands);
+    setDisplayDemands(initializedDemands);
+  }
+
+  const filteredDemands = displayDemands.filter(demand => {
     const stageName = demand.stage?.name || "";
     return stageName === "Backlog" || UPSTREAM_STAGES.includes(stageName) || stageName === "Options Inventory";
   });
+
+  const updateScore = (demandId: string, scoreType: 'retencao' | 'aquisicao' | 'interacao' | 'ftds', value: number) => {
+    // Update the main data
+    setDemandsWithScores(prevDemands => {
+      return prevDemands.map(demand => {
+        if (demand.id === demandId) {
+          const updatedScores = {
+            ...demand.scores,
+            [scoreType]: value
+          };
+          
+          // Calculate the total score based on weights from the image
+          const total = 
+            updatedScores.retencao * 20 + 
+            updatedScores.aquisicao * 20 + 
+            updatedScores.interacao * 20 + 
+            updatedScores.ftds * 40;
+          
+          return {
+            ...demand,
+            scores: {
+              ...updatedScores,
+              total
+            }
+          };
+        }
+        return demand;
+      });
+    });
+
+    // Also update the score in the display demands without changing order
+    setDisplayDemands(prev => {
+      return prev.map(demand => {
+        if (demand.id === demandId) {
+          const updatedScores = {
+            ...demand.scores,
+            [scoreType]: value
+          };
+          
+          const total = 
+            updatedScores.retencao * 20 + 
+            updatedScores.aquisicao * 20 + 
+            updatedScores.interacao * 20 + 
+            updatedScores.ftds * 40;
+          
+          return {
+            ...demand,
+            scores: {
+              ...updatedScores,
+              total
+            }
+          };
+        }
+        return demand;
+      });
+    });
+  };
+
+  const handleSaveAndSort = () => {
+    // Sort the display demands based on total score
+    setDisplayDemands(prev => [...prev].sort((a, b) => b.scores.total - a.scores.total));
+    setIsSorted(true);
+  };
 
   const groupedDemands = {
     Backlog: filteredDemands.filter(d => d.stage?.name === "Backlog"),
@@ -201,6 +323,24 @@ export default function PriorizacaoPage() {
         <StageCard title="Options Inventory" count={groupedDemands.Options.length} />
       </div>
 
+      <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-blue-800 mb-2">Business Value Prioritization (BVP)</h2>
+            <p className="text-sm text-blue-700">
+              Avalie cada demanda atribuindo pontuações de 1 a 5 estrelas para cada critério. Os pesos são: 
+              Retenção (20%), Aquisição (20%), Interação (20%), FTDs (40%).
+            </p>
+          </div>
+          <button
+            onClick={handleSaveAndSort}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            {isSorted ? "Reordenar" : "Salvar e Ordenar"}
+          </button>
+        </div>
+      </div>
+
       {filteredDemands.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -210,10 +350,40 @@ export default function PriorizacaoPage() {
                 <th className="p-3 text-left font-semibold text-gray-700 border-b">Título</th>
                 <th className="p-3 text-left font-semibold text-gray-700 border-b">Tipo</th>
                 <th className="p-3 text-left font-semibold text-gray-700 border-b">Stage</th>
+                <th className="p-3 text-center font-semibold text-gray-700 border-b">
+                  <div className="flex flex-col items-center">
+                    <span>Aumenta a retenção</span>
+                    <span className="text-xs font-normal">(20%)</span>
+                  </div>
+                </th>
+                <th className="p-3 text-center font-semibold text-gray-700 border-b">
+                  <div className="flex flex-col items-center">
+                    <span>Aquisição de Usuários</span>
+                    <span className="text-xs font-normal">(20%)</span>
+                  </div>
+                </th>
+                <th className="p-3 text-center font-semibold text-gray-700 border-b">
+                  <div className="flex flex-col items-center">
+                    <span>Proporciona interação na comunidade</span>
+                    <span className="text-xs font-normal">(20%)</span>
+                  </div>
+                </th>
+                <th className="p-3 text-center font-semibold text-gray-700 border-b">
+                  <div className="flex flex-col items-center">
+                    <span>Produz mais FTDs</span>
+                    <span className="text-xs font-normal">(40%)</span>
+                  </div>
+                </th>
+                <th className="p-3 text-center font-semibold text-gray-700 border-b">
+                  <div className="flex flex-col items-center">
+                    <span>Pontuação</span>
+                    <span className="text-xs font-normal">(Total)</span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filteredDemands.map((demand) => (
+              {displayDemands.map((demand) => (
                 <tr key={demand.id} className="hover:bg-gray-50">
                   <td className="p-3 border-b">
                     {demand.slug ? (
@@ -236,6 +406,33 @@ export default function PriorizacaoPage() {
                   </td>
                   <td className="p-3 border-b">
                     {demand.stage?.name || <span className="text-gray-400 italic">-</span>}
+                  </td>
+                  <td className="p-3 border-b text-center">
+                    <StarRating 
+                      value={demand.scores.retencao} 
+                      onChange={(value) => updateScore(demand.id, 'retencao', value)} 
+                    />
+                  </td>
+                  <td className="p-3 border-b text-center">
+                    <StarRating 
+                      value={demand.scores.aquisicao} 
+                      onChange={(value) => updateScore(demand.id, 'aquisicao', value)} 
+                    />
+                  </td>
+                  <td className="p-3 border-b text-center">
+                    <StarRating 
+                      value={demand.scores.interacao} 
+                      onChange={(value) => updateScore(demand.id, 'interacao', value)} 
+                    />
+                  </td>
+                  <td className="p-3 border-b text-center">
+                    <StarRating 
+                      value={demand.scores.ftds} 
+                      onChange={(value) => updateScore(demand.id, 'ftds', value)} 
+                    />
+                  </td>
+                  <td className="p-3 border-b font-bold text-center">
+                    {demand.scores.total}
                   </td>
                 </tr>
               ))}
