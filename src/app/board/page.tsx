@@ -15,6 +15,9 @@ interface BoardDemand {
   end_date: string | null;
   work_item_type_id: number | null;
   status: string;
+  stage: {
+    name: string;
+  } | null;
 }
 
 interface BoardResponse {
@@ -26,6 +29,9 @@ interface BoardResponse {
     discarded_at: string | null;
     end_date: string | null;
     work_item_type_id: number | null;
+    stage: {
+      name: string;
+    } | null;
   }[];
   customers_by_pk?: {
     name: string;
@@ -42,6 +48,9 @@ const BOARD_DEMANDS_QUERY = (customerId: string | null) => gql`
       discarded_at
       end_date
       work_item_type_id
+      stage {
+        name
+      }
     }
     customers_by_pk(
       id: ${customerId}
@@ -57,10 +66,13 @@ export default function BoardPage() {
   const isCustomerIdEmpty = !customerId || customerId === "0";
   const [groupedDemands, setGroupedDemands] = useState<Record<string, BoardDemand[]>>({
     "Backlog": [],
-    "Em Andamento": [],
-    "Concluído": [],
+    "Upstream": [],
+    "Options": [],
+    "Downstream": [],
+    "Concluídas": [],
     "Descartado": []
   });
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
 
   const { loading, error, data } = useQuery<BoardResponse>(BOARD_DEMANDS_QUERY(customerId), {
     fetchPolicy: "network-only",
@@ -77,12 +89,15 @@ export default function BoardPage() {
   const categorizeDemands = (demands: BoardResponse['demands']) => {
     const result: Record<string, BoardDemand[]> = {
       "Backlog": [],
-      "Em Andamento": [],
-      "Concluído": [],
+      "Upstream": [],
+      "Options": [],
+      "Downstream": [],
+      "Concluídas": [],
       "Descartado": []
     };
 
     demands.forEach(demand => {
+      const stageName = demand.stage?.name || "";
       const boardDemand: BoardDemand = {
         ...demand,
         status: getDemandStatus(demand)
@@ -90,12 +105,25 @@ export default function BoardPage() {
 
       if (demand.discarded_at) {
         result["Descartado"].push(boardDemand);
-      } else if (demand.end_date) {
-        result["Concluído"].push(boardDemand);
-      } else if (demand.commitment_date) {
-        result["Em Andamento"].push(boardDemand);
-      } else {
+      } else if (stageName === "Backlog") {
         result["Backlog"].push(boardDemand);
+      } else if (["Waiting to Synthesis", "Synthesis", "In Analysis", "Ready to Analysis"].includes(stageName)) {
+        result["Upstream"].push(boardDemand);
+      } else if (stageName === "Options Inventory") {
+        result["Options"].push(boardDemand);
+      } else if (["Ready to Dev", "Developing", "Ready to HMG", "Homologating", "Ready to Deploy"].includes(stageName)) {
+        result["Downstream"].push(boardDemand);
+      } else if (["Done", "Arquivado"].includes(stageName)) {
+        result["Concluídas"].push(boardDemand);
+      } else {
+        // Fallback to the existing categorization logic if stage name doesn't match
+        if (demand.end_date) {
+          result["Concluídas"].push(boardDemand);
+        } else if (demand.commitment_date) {
+          result["Downstream"].push(boardDemand);
+        } else {
+          result["Backlog"].push(boardDemand);
+        }
       }
     });
 
@@ -104,8 +132,19 @@ export default function BoardPage() {
 
   const getDemandStatus = (demand: BoardResponse['demands'][0]): string => {
     if (demand.discarded_at) return "Descartado";
-    if (demand.end_date) return "Concluído";
-    if (demand.commitment_date) return "Em Andamento";
+    
+    const stageName = demand.stage?.name || "";
+    
+    if (["Done", "Arquivado"].includes(stageName)) return "Concluídas";
+    if (["Ready to Dev", "Developing", "Ready to HMG", "Homologating", "Ready to Deploy"].includes(stageName)) return "Downstream";
+    if (stageName === "Options Inventory") return "Options";
+    if (["Waiting to Synthesis", "Synthesis", "In Analysis", "Ready to Analysis"].includes(stageName)) return "Upstream";
+    if (stageName === "Backlog") return "Backlog";
+    
+    // Fallback to the original logic
+    if (demand.end_date) return "Concluídas";
+    if (demand.commitment_date) return "Downstream";
+    
     return "Backlog";
   };
 
@@ -153,25 +192,87 @@ export default function BoardPage() {
         {isCustomerIdEmpty && <ParameterSelectionButtons parameterName="customer_id" />}
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        {Object.entries(groupedDemands).map(([status, demands]) => (
+      <div className="grid grid-cols-5 gap-4 mb-8">
+        {Object.entries(groupedDemands)
+          .filter(([status]) => status !== "Descartado")
+          .map(([status, demands]) => (
           <div key={status} className="bg-gray-100 p-4 rounded-lg">
             <h2 className="text-xl font-semibold mb-4 text-center">{status} ({demands.length})</h2>
             <div className="space-y-4">
-              {demands.map(demand => (
-                <DemandCard 
-                  key={demand.id}
-                  demand={demand}
-                />
-              ))}
-              {demands.length === 0 && (
-                <div className="text-center p-4 text-gray-500">
-                  Nenhuma demanda
-                </div>
+              {status === "Concluídas" ? (
+                <>
+                  {demands
+                    .filter(demand => {
+                      if (showAllCompleted) return true;
+                      if (!demand.end_date) return false;
+                      const twoWeeksAgo = new Date();
+                      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+                      return new Date(demand.end_date) >= twoWeeksAgo;
+                    })
+                    .map(demand => (
+                      <DemandCard 
+                        key={demand.id}
+                        demand={demand}
+                      />
+                    ))
+                  }
+                  {!showAllCompleted && demands.some(demand => {
+                    if (!demand.end_date) return false;
+                    const twoWeeksAgo = new Date();
+                    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+                    return new Date(demand.end_date) < twoWeeksAgo;
+                  }) && (
+                    <button 
+                      className="w-full p-2 mt-4 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                      onClick={() => setShowAllCompleted(true)}
+                    >
+                      Mostrar todas as concluídas
+                    </button>
+                  )}
+                  {showAllCompleted && (
+                    <button 
+                      className="w-full p-2 mt-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                      onClick={() => setShowAllCompleted(false)}
+                    >
+                      Mostrar apenas recentes
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  {demands.map(demand => (
+                    <DemandCard 
+                      key={demand.id}
+                      demand={demand}
+                    />
+                  ))}
+                  {demands.length === 0 && (
+                    <div className="text-center p-4 text-gray-500">
+                      Nenhuma demanda
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="bg-gray-100 p-4 rounded-lg">
+        <h2 className="text-xl font-semibold mb-4 text-center">Descartado ({groupedDemands["Descartado"].length})</h2>
+        <div className="grid grid-cols-3 gap-4">
+          {groupedDemands["Descartado"].map(demand => (
+            <DemandCard 
+              key={demand.id}
+              demand={demand}
+            />
+          ))}
+          {groupedDemands["Descartado"].length === 0 && (
+            <div className="text-center p-4 text-gray-500">
+              Nenhuma demanda descartada
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
