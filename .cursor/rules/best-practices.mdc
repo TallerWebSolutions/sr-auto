@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- Don't use comments to explain the code, instead use declarative and functional style, so the code should be expressive enough to understand it without cognitive overload and the use of comments.
+- Make code easy to understand and refactor later, so don't start with gigantic amount of ideial code.
