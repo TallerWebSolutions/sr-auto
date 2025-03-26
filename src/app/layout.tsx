@@ -30,6 +30,9 @@ export default function RootLayout({
             <Link href="/board" className="hover:text-gray-300">
               Board
             </Link>
+            <Link href="/team-board" className="hover:text-gray-300">
+              Team Board
+            </Link>
             <Link href="/lead-times" className="hover:text-gray-300">
               Lead Times
             </Link>
