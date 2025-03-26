@@ -18,9 +18,10 @@ import {
 type ServiceClass = "expedite" | "standard" | "intangible" | "fixed-date";
 type DemandType = "feature" | "chore" | "bug";
 
-type Task = {
+type Demand = {
   id: string;
   title: string;
+  demandId: string;
   epic: string;
   type: DemandType;
   serviceClass: ServiceClass;
@@ -31,13 +32,15 @@ type Task = {
   createdAt: Date;
   dueDate?: Date;
   isBlocked: boolean;
+  blockingReason?: string;
+  blockingDemands?: string[];
   ageing: number;
 };
 
 type Column = {
   id: string;
   title: string;
-  tasks: Task[];
+  demands: Demand[];
   group?: string;
 };
 
@@ -46,7 +49,7 @@ const getServiceClassColor = (serviceClass: ServiceClass): string => {
     expedite: "bg-red-100 text-red-800",
     standard: "bg-blue-100 text-blue-800",
     intangible: "bg-purple-100 text-purple-800",
-    "fixed-date": "bg-green-100 text-green-800",
+    "fixed-date": "bg-gray-100 text-gray-800",
   };
   return colors[serviceClass];
 };
@@ -111,14 +114,42 @@ const getAgeingTooltip = (days: number): string => {
   return `${days} days in this column`;
 };
 
+/**
+ * Determines the appropriate color for an aging dot based on its position and the demand's age
+ *
+ * Color coding logic:
+ * - First dot (index 0): Always gray (visual anchor)
+ * - Age 0-1 days: Only gray dots
+ * - Age 2-3 days: First dot gray, others yellow (moderate attention)
+ * - Age 4-5 days: First dot gray, next two yellow, rest red (needs attention)
+ * - Age 6+ days: First dot gray, all others red (urgent attention needed)
+ */
+const getAgeDotColor = (ageingDays: number, dotIndex: number): string => {
+  // First dot is always gray to provide consistent visual anchor
+  if (dotIndex === 0) return "bg-gray-300";
+
+  // High aging (6+ days) - urgent attention needed
+  if (ageingDays >= 6) return "bg-red-300";
+
+  // Medium aging (4-5 days) - needs attention
+  if (ageingDays > 3) return dotIndex < 3 ? "bg-yellow-300" : "bg-red-300";
+
+  // Low aging (2-3 days) - moderate attention
+  if (ageingDays > 1) return "bg-yellow-300";
+
+  // Very low aging (0-1 days) - no special attention needed
+  return "bg-gray-300";
+};
+
 const initialData: Column[] = [
   {
     id: "backlog",
     title: "Backlog",
-    tasks: [
+    demands: [
       {
         id: "task-1",
         title: "User profile settings",
+        demandId: "PRL-203",
         epic: "User Management",
         type: "feature",
         serviceClass: "standard",
@@ -129,11 +160,14 @@ const initialData: Column[] = [
       {
         id: "task-2",
         title: "Fix login page crash",
+        demandId: "PRL-204",
         epic: "User Management",
         type: "bug",
         serviceClass: "expedite",
         createdAt: new Date("2024-03-25"),
         isBlocked: true,
+        blockingReason: "Waiting for API update",
+        blockingDemands: ["API-227", "PERF-118"],
         ageing: 1,
       },
     ],
@@ -142,10 +176,11 @@ const initialData: Column[] = [
   {
     id: "ready-for-analysis",
     title: "Ready for Analysis",
-    tasks: [
+    demands: [
       {
         id: "task-3",
         title: "Payment gateway integration",
+        demandId: "CHK-101",
         epic: "Checkout",
         type: "feature",
         serviceClass: "fixed-date",
@@ -160,10 +195,11 @@ const initialData: Column[] = [
   {
     id: "in-analysis",
     title: "In Analysis",
-    tasks: [
+    demands: [
       {
         id: "task-4",
         title: "Product search optimization",
+        demandId: "SRC-427",
         epic: "Search",
         type: "feature",
         serviceClass: "standard",
@@ -183,10 +219,11 @@ const initialData: Column[] = [
   {
     id: "options",
     title: "Options",
-    tasks: [
+    demands: [
       {
         id: "task-5",
         title: "Mobile app UI redesign",
+        demandId: "MOB-155",
         epic: "Mobile Experience",
         type: "feature",
         serviceClass: "intangible",
@@ -206,10 +243,11 @@ const initialData: Column[] = [
   {
     id: "ready-for-dev",
     title: "Ready for Dev",
-    tasks: [
+    demands: [
       {
         id: "task-6",
         title: "Implement user authentication",
+        demandId: "AUTH-320",
         epic: "User Management",
         type: "feature",
         serviceClass: "standard",
@@ -220,6 +258,7 @@ const initialData: Column[] = [
       {
         id: "task-7",
         title: "Fix registration form validation",
+        demandId: "AUTH-321",
         epic: "User Management",
         type: "bug",
         serviceClass: "expedite",
@@ -233,10 +272,11 @@ const initialData: Column[] = [
   {
     id: "in-dev",
     title: "In Development",
-    tasks: [
+    demands: [
       {
         id: "task-8",
         title: "Database optimization",
+        demandId: "PERF-118",
         epic: "Performance",
         type: "chore",
         serviceClass: "intangible",
@@ -261,10 +301,11 @@ const initialData: Column[] = [
   {
     id: "ready-for-review",
     title: "Ready for Review",
-    tasks: [
+    demands: [
       {
         id: "task-9",
         title: "User registration endpoint",
+        demandId: "API-227",
         epic: "API Development",
         type: "feature",
         serviceClass: "standard",
@@ -284,10 +325,11 @@ const initialData: Column[] = [
   {
     id: "in-review",
     title: "In Review",
-    tasks: [
+    demands: [
       {
         id: "task-10",
         title: "Shopping cart functionality",
+        demandId: "CHK-103",
         epic: "Checkout",
         type: "feature",
         serviceClass: "standard",
@@ -307,10 +349,11 @@ const initialData: Column[] = [
   {
     id: "ready-for-deploy",
     title: "Ready for Deploy",
-    tasks: [
+    demands: [
       {
         id: "task-11",
         title: "Customer dashboard",
+        demandId: "USR-099",
         epic: "User Management",
         type: "feature",
         serviceClass: "fixed-date",
@@ -331,10 +374,11 @@ const initialData: Column[] = [
   {
     id: "done",
     title: "Done",
-    tasks: [
+    demands: [
       {
         id: "task-12",
         title: "API documentation",
+        demandId: "DOC-435",
         epic: "Documentation",
         type: "chore",
         serviceClass: "standard",
@@ -351,6 +395,7 @@ const initialData: Column[] = [
       {
         id: "task-13",
         title: "Password reset functionality",
+        demandId: "USR-105",
         epic: "User Management",
         type: "feature",
         serviceClass: "standard",
@@ -388,26 +433,26 @@ export default function TeamBoard() {
     const destColumn = columns.find(
       (col) => col.id === destination.droppableId
     );
-    const sourceTasks = [...sourceColumn!.tasks];
-    const destTasks =
+    const sourceDemands = [...sourceColumn!.demands];
+    const destDemands =
       source.droppableId === destination.droppableId
-        ? sourceTasks
-        : [...destColumn!.tasks];
-    const [removed] = sourceTasks.splice(source.index, 1);
-    destTasks.splice(destination.index, 0, removed);
+        ? sourceDemands
+        : [...destColumn!.demands];
+    const [removed] = sourceDemands.splice(source.index, 1);
+    destDemands.splice(destination.index, 0, removed);
 
     setColumns(
       columns.map((col) => {
         if (col.id === source.droppableId) {
           return {
             ...col,
-            tasks: sourceTasks,
+            demands: sourceDemands,
           };
         }
         if (col.id === destination.droppableId) {
           return {
             ...col,
-            tasks: destTasks,
+            demands: destDemands,
           };
         }
         return col;
@@ -437,7 +482,7 @@ export default function TeamBoard() {
                   <h3 className="font-semibold mb-4 flex items-center">
                     <span>{column.title}</span>
                     <span className="ml-2 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded-full">
-                      {column.tasks.length}
+                      {column.demands.length}
                     </span>
                   </h3>
                   <Droppable droppableId={column.id}>
@@ -447,10 +492,10 @@ export default function TeamBoard() {
                         ref={provided.innerRef}
                         className="flex-1 overflow-y-auto pr-1"
                       >
-                        {column.tasks.map((task, index) => (
+                        {column.demands.map((demand, index) => (
                           <Draggable
-                            key={task.id}
-                            draggableId={task.id}
+                            key={demand.id}
+                            draggableId={demand.id}
                             index={index}
                           >
                             {(provided) => (
@@ -459,57 +504,37 @@ export default function TeamBoard() {
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
                                 className={`bg-white p-4 mb-4 rounded-lg shadow-sm border ${
-                                  task.isBlocked
-                                    ? "border-red-200"
+                                  demand.isBlocked
+                                    ? "border-red-300"
                                     : "border-gray-100"
-                                } relative`}
+                                }`}
                               >
-                                {task.isBlocked && (
-                                  <div className="absolute top-0 right-0 left-0 bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-t-lg text-center">
-                                    BLOCKED
-                                  </div>
-                                )}
-
-                                {/* Epic & Icons Row */}
-                                <div
-                                  className={`flex items-center justify-between mb-3 ${
-                                    task.isBlocked ? "mt-6" : ""
-                                  }`}
-                                >
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="text-xs text-gray-500 truncate max-w-[150px] cursor-default">
-                                        {task.epic}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Epic: {task.epic}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
+                                {/* Header Row with Type/Service Icons and Blocked Indicator */}
+                                <div className="flex items-center justify-between mt-auto">
                                   <div className="flex items-center gap-2">
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <span
                                           className={`text-sm px-1.5 py-0.5 rounded cursor-default ${getServiceClassColor(
-                                            task.serviceClass
+                                            demand.serviceClass
                                           )}`}
                                         >
                                           {getServiceClassIcon(
-                                            task.serviceClass
+                                            demand.serviceClass
                                           )}
                                         </span>
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         <p>
                                           <strong>
-                                            {task.serviceClass
+                                            {demand.serviceClass
                                               .charAt(0)
                                               .toUpperCase() +
-                                              task.serviceClass.slice(1)}
+                                              demand.serviceClass.slice(1)}
                                           </strong>
                                           <br />
                                           {getServiceClassDescription(
-                                            task.serviceClass
+                                            demand.serviceClass
                                           )}
                                         </p>
                                       </TooltipContent>
@@ -517,48 +542,111 @@ export default function TeamBoard() {
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <span
-                                          className={`text-sm px-1.5 py-0.5 rounded cursor-default ${getDemandTypeColor(
-                                            task.type
+                                          className={`text-sm px-1.5 py-0.5 rounded cursor-default flex items-center ${getDemandTypeColor(
+                                            demand.type
                                           )}`}
                                         >
-                                          {getDemandTypeIcon(task.type)}
+                                          {getDemandTypeIcon(demand.type)}
+                                          <span className="text-[10px] font-medium ml-1 tracking-wider">
+                                            #{demand.demandId}
+                                          </span>
                                         </span>
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         <p>
                                           <strong>
-                                            {task.type.charAt(0).toUpperCase() +
-                                              task.type.slice(1)}
+                                            {demand.type
+                                              .charAt(0)
+                                              .toUpperCase() +
+                                              demand.type.slice(1)}
                                           </strong>
                                           <br />
-                                          {getDemandTypeDescription(task.type)}
+                                          {getDemandTypeDescription(
+                                            demand.type
+                                          )}
                                         </p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </div>
-                                </div>
 
-                                {/* Task Title */}
-                                <div className="font-medium mb-4 text-sm">
-                                  {task.title}
-                                  {task.isBlocked && (
+                                  {demand.isBlocked && (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <span className="ml-1 text-red-500">
-                                          ⚠️
-                                        </span>
+                                        <div className="bg-red-100 text-red-800 p-1 pb-0 rounded-lg shadow-sm flex items-center cursor-default">
+                                          <span className="text-sm">🚫</span>
+                                          {demand.blockingDemands &&
+                                            demand.blockingDemands.length >
+                                              0 && (
+                                              <span className="ml-1 text-xs font-bold">
+                                                {demand.blockingDemands.length}
+                                              </span>
+                                            )}
+                                        </div>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>This task is blocked</p>
+                                        <div>
+                                          <strong>
+                                            Blocked
+                                            {demand.blockingReason
+                                              ? `: ${demand.blockingReason}`
+                                              : ""}
+                                          </strong>
+
+                                          {demand.blockingDemands &&
+                                            demand.blockingDemands.length >
+                                              0 && (
+                                              <>
+                                                <div className="mt-1">
+                                                  Blocked by{" "}
+                                                  {
+                                                    demand.blockingDemands
+                                                      .length
+                                                  }{" "}
+                                                  demand
+                                                  {demand.blockingDemands
+                                                    .length > 1
+                                                    ? "s"
+                                                    : ""}
+                                                  :
+                                                </div>
+                                                <ul className="list-disc pl-4 mt-1">
+                                                  {demand.blockingDemands.map(
+                                                    (id) => (
+                                                      <li key={id}>#{id}</li>
+                                                    )
+                                                  )}
+                                                </ul>
+                                              </>
+                                            )}
+                                        </div>
                                       </TooltipContent>
                                     </Tooltip>
                                   )}
                                 </div>
 
+                                {/* Epic Row */}
+                                <div className="mb-1">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="text-xs text-gray-500 truncate max-w-[220px] cursor-default">
+                                        {demand.epic}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Epic: {demand.epic}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+
+                                {/* Demand Title */}
+                                <div className="font-medium mb-7 text-sm">
+                                  {demand.title}
+                                </div>
+
                                 {/* Assignees & Aging */}
                                 <div className="flex items-center justify-between mt-3">
                                   <div className="flex -space-x-1.5">
-                                    {task.assignees?.map((assignee, idx) => (
+                                    {demand.assignees?.map((assignee, idx) => (
                                       <Tooltip key={idx}>
                                         <TooltipTrigger asChild>
                                           <img
@@ -576,29 +664,30 @@ export default function TeamBoard() {
 
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div className="flex items-center gap-1 cursor-default">
+                                      <div className="flex items-center gap-0.5 cursor-default">
                                         {Array.from({
-                                          length: task.ageing,
-                                        }).map((_, i) => (
-                                          <div
-                                            key={i}
-                                            className={`w-2 h-2 rounded-full ${
-                                              i < 1
-                                                ? "bg-gray-300"
-                                                : i < 3
-                                                ? "bg-yellow-300"
-                                                : "bg-red-300"
-                                            }`}
-                                          />
-                                        ))}
+                                          length: Math.min(6, demand.ageing),
+                                        }).map((_, i) => {
+                                          const dotColor = getAgeDotColor(
+                                            demand.ageing,
+                                            i
+                                          );
+
+                                          return (
+                                            <div
+                                              key={i}
+                                              className={`w-1.5 h-1.5 rounded-full ${dotColor}`}
+                                            />
+                                          );
+                                        })}
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>
                                         <strong>Age indicator</strong>
                                         <br />
-                                        {getAgeingTooltip(task.ageing)}
-                                        {task.ageing >= 3 &&
+                                        {getAgeingTooltip(demand.ageing)}
+                                        {demand.ageing >= 3 &&
                                           " - Needs attention!"}
                                       </p>
                                     </TooltipContent>
@@ -606,24 +695,24 @@ export default function TeamBoard() {
                                 </div>
 
                                 {/* Due Date - if exists */}
-                                {task.dueDate && (
+                                {demand.dueDate && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div
                                         className={`mt-4 text-xs px-3 py-1 text-center rounded cursor-default ${getDueDateColor(
-                                          task.dueDate
+                                          demand.dueDate
                                         )}`}
                                       >
-                                        Due: {format(task.dueDate, "MMM d")}
+                                        Due: {format(demand.dueDate, "MMM d")}
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>
                                         <strong>Due date</strong>
                                         <br />
-                                        {isPast(task.dueDate)
+                                        {isPast(demand.dueDate)
                                           ? "Overdue!"
-                                          : isToday(task.dueDate)
+                                          : isToday(demand.dueDate)
                                           ? "Due today!"
                                           : "Upcoming deadline"}
                                       </p>
