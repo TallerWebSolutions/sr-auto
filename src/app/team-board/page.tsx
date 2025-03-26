@@ -460,10 +460,20 @@ export default function TeamBoard() {
                                   task.isBlocked
                                     ? "border-red-200"
                                     : "border-gray-100"
-                                }`}
+                                } relative`}
                               >
+                                {task.isBlocked && (
+                                  <div className="absolute top-0 right-0 left-0 bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-t-lg text-center">
+                                    BLOCKED
+                                  </div>
+                                )}
+
                                 {/* Epic & Icons Row */}
-                                <div className="flex items-center justify-between mb-3">
+                                <div
+                                  className={`flex items-center justify-between mb-3 ${
+                                    task.isBlocked ? "mt-6" : ""
+                                  }`}
+                                >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="text-xs text-gray-500 truncate max-w-[150px] cursor-default">
