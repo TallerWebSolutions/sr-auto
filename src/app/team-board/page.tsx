@@ -416,20 +416,22 @@ export default function TeamBoard() {
   };
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Team Board</h1>
+    <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="py-6 px-8">
+        <h1 className="text-2xl font-bold">Team Board</h1>
+      </div>
 
       <TooltipProvider>
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="overflow-x-auto pb-4">
+          <div className="flex-1 overflow-x-auto overflow-y-hidden px-8 pb-4">
             <div
-              className="flex flex-row gap-4"
+              className="flex flex-row gap-4 h-full"
               style={{ minWidth: "max-content" }}
             >
               {columns.map((column) => (
                 <div
                   key={column.id}
-                  className="bg-gray-50 rounded-lg p-4 flex-shrink-0"
+                  className="bg-gray-50 rounded-lg p-4 flex-shrink-0 flex flex-col h-[calc(100vh-178px)]"
                   style={{ width: "300px" }}
                 >
                   <h3 className="font-semibold mb-4 flex items-center">
@@ -443,7 +445,7 @@ export default function TeamBoard() {
                       <div
                         {...provided.droppableProps}
                         ref={provided.innerRef}
-                        className="min-h-[400px]"
+                        className="flex-1 overflow-y-auto pr-1"
                       >
                         {column.tasks.map((task, index) => (
                           <Draggable
