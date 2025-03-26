@@ -129,7 +129,7 @@ const getAgeDotColor = (ageingDays: number, dotIndex: number): string => {
   if (dotIndex === 0) return "bg-gray-300";
 
   // High aging (6+ days) - urgent attention needed
-  if (ageingDays >= 6) return "bg-red-300";
+  if (ageingDays >= 6) return "bg-red-400/80";
 
   // Medium aging (4-5 days) - needs attention
   if (ageingDays > 3) return dotIndex < 3 ? "bg-yellow-300" : "bg-red-300";
@@ -572,7 +572,7 @@ export default function TeamBoard() {
                                   {demand.isBlocked && (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className="bg-red-100 text-red-800 p-1 pb-0 rounded-lg shadow-sm flex items-center cursor-default">
+                                        <div className="bg-red-100 text-red-800 p-1 pb-0.5 rounded-lg shadow-sm flex items-center cursor-default">
                                           <span className="text-sm">🚫</span>
                                           {demand.blockingDemands &&
                                             demand.blockingDemands.length >
