@@ -1,6 +1,5 @@
-export * from './HourConsumptionSummary';
 export * from './ContractDoughnutChart';
-export * from './MonthlyHoursBarChart';
+export * from './ContractEffortSummary';
 export * from './DemandsTable';
 export * from './HoursBurnupChart';
 export * from './LoadingState';

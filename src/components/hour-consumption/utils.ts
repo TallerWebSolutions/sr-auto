@@ -1,12 +1,3 @@
-export interface DemandWithHours {
-  id: string;
-  slug: string;
-  demand_title: string;
-  end_date: string | null;
-  hours_consumed: number;
-  commitment_date: string | null;
-}
-
 export interface WeeklyHoursData {
   weekLabel: string;
   totalHours: number;

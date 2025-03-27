@@ -1,7 +1,6 @@
 "use client";
 
 import { gql, useQuery } from "@apollo/client";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Chart as ChartJS,
@@ -18,20 +17,17 @@ import {
 import annotationPlugin from "chartjs-plugin-annotation";
 import React from "react";
 import {
-  HourConsumptionSummary,
-  MonthlyHoursBarChart,
   HoursBurnupChart,
+  ContractEffortSummary,
   LoadingState,
   ErrorState,
   EmptyState,
   formatDate,
-  processDemandsData,
   getActiveContract,
   getTotalHoursFromAllContracts,
   processWeeklyHoursData,
   getCurrentWeekIndex,
   calculateHoursNeeded,
-  prepareMonthlyChartData,
 } from "@/components/hour-consumption";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 
@@ -193,9 +189,6 @@ export default function HourConsumptionPage() {
     );
   }
 
-  const { allCustomerDemands, completedDemands, totalHoursConsumed, hpd } =
-    processDemandsData(demandsData);
-
   const selectedContract =
     contractId && contractId !== "0"
       ? contractsData?.contracts.find(
@@ -241,8 +234,6 @@ export default function HourConsumptionPage() {
     totalContractHours
   );
 
-  const monthlyChartData = prepareMonthlyChartData(completedDemands);
-
   if (isLoading) {
     return <LoadingState />;
   }
@@ -272,27 +263,11 @@ export default function HourConsumptionPage() {
             </span>
           )}
         </h1>
-        <div className="text-gray-500">
-          <Link href="/demands" className="text-blue-600 hover:underline mr-4">
-            Ver todas as demandas
-          </Link>
-          Total:{" "}
-          <span className="font-semibold">{allCustomerDemands.length}</span>
-        </div>
       </div>
 
-      {allCustomerDemands.length > 0 ? (
-        <>
-          <HourConsumptionSummary
-            totalHoursConsumed={totalHoursConsumed}
-            hpd={hpd}
-            contractTotalHours={totalContractHours}
-            contractStartDate={globalStartDate}
-            contractEndDate={globalEndDate}
-            formatDate={formatDate}
-            activeContractsCount={activeContractsCount}
-          />
-
+      {contractId && contractId !== "0" ? (
+        <div className="grid gap-6 grid-cols-4 my-8">
+          <ContractEffortSummary contractId={Number(contractId)} />
           <HoursBurnupChart
             weeklyHoursData={weeklyHoursData}
             currentWeekIndex={currentWeekIndex}
@@ -302,11 +277,7 @@ export default function HourConsumptionPage() {
             endDate={globalEndDate}
             formatDate={formatDate}
           />
-
-          <div className="grid gap-6 md:grid-cols-2 mb-8">
-            <MonthlyHoursBarChart chartData={monthlyChartData} />
-          </div>
-        </>
+        </div>
       ) : (
         <EmptyState />
       )}

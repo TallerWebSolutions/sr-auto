@@ -151,7 +151,7 @@ export function HoursBurnupChart({
   };
 
   return (
-    <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm mb-8">
+    <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm mb-8 col-span-3">
       <h2 className="text-xl font-bold text-gray-900 mb-4">Escopo e Progresso Ideal do Produto</h2>
       <p className="text-sm text-gray-600 mb-4">Este gráfico mostra o escopo total (horas contratadas), horas consumidas e a linha de progresso ideal ao longo do tempo</p>
       <div className="flex flex-col lg:flex-row gap-4">

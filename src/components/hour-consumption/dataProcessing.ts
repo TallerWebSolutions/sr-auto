@@ -1,4 +1,4 @@
-import { DemandWithHours, WeeklyHoursData, getWeekNumber, formatWeekLabel } from './utils';
+import { WeeklyHoursData, getWeekNumber, formatWeekLabel } from './utils';
 
 interface DemandsData {
   demands: {
@@ -21,63 +21,6 @@ interface ContractsData {
     total_hours: number;
     end_date: string;
   }[];
-}
-
-// Process demands data to get all customer demands and completed demands
-export function processDemandsData(demandsData: DemandsData | undefined): {
-  allCustomerDemands: DemandWithHours[];
-  completedDemands: DemandWithHours[];
-  totalHoursConsumed: number;
-  hpd: number;
-} {
-  const allCustomerDemands: DemandWithHours[] = [];
-  const completedDemands: DemandWithHours[] = [];
-  
-  if (demandsData?.demands) {
-    demandsData.demands.forEach(demand => {
-      // Calculate hours consumed by summing effort_upstream and effort_downstream
-      const effortUpstream = demand.effort_upstream || 0;
-      const effortDownstream = demand.effort_downstream || 0;
-      const hoursConsumed = effortUpstream + effortDownstream;
-      
-      // Add to all customer demands for contract comparison
-      allCustomerDemands.push({
-        id: demand.id,
-        slug: demand.slug,
-        demand_title: demand.demand_title,
-        end_date: demand.end_date,
-        hours_consumed: hoursConsumed,
-        commitment_date: demand.commitment_date
-      });
-      
-      // Add only completed demands for HpD calculation
-      if (demand.end_date !== null) {
-        completedDemands.push({
-          id: demand.id,
-          slug: demand.slug,
-          demand_title: demand.demand_title,
-          end_date: demand.end_date,
-          hours_consumed: hoursConsumed,
-          commitment_date: demand.commitment_date
-        });
-      }
-    });
-  }
-
-  // Calculate total hours consumed for all customer demands
-  const totalHoursConsumed = allCustomerDemands.reduce((acc, demand) => acc + demand.hours_consumed, 0);
-  const totalHoursConsumedForCompletedDemands = completedDemands.reduce((acc, demand) => acc + demand.hours_consumed, 0);
-  
-  // Calculate HpD (Hours per Demand) for completed demands
-  const totalCompletedDemands = completedDemands.length;
-  const hpd = totalCompletedDemands > 0 ? totalHoursConsumedForCompletedDemands / totalCompletedDemands : 0;
-
-  return {
-    allCustomerDemands,
-    completedDemands,
-    totalHoursConsumed,
-    hpd
-  };
 }
 
 // Get active contract
@@ -244,52 +187,3 @@ export function calculateHoursNeeded(
 
   return weeksRemaining > 0 ? hoursRemaining / weeksRemaining : 0;
 }
-
-export function groupDemandsByMonth(completedDemands: DemandWithHours[]) {
-  const grouped: Record<string, { totalHours: number, count: number }> = {};
-
-  completedDemands.forEach(demand => {
-    if (!demand.end_date) return;
-    
-    const endDate = new Date(demand.end_date);
-    const monthKey = `${endDate.getFullYear()}-${(endDate.getMonth() + 1).toString().padStart(2, '0')}`;
-    
-    if (!grouped[monthKey]) {
-      grouped[monthKey] = { totalHours: 0, count: 0 };
-    }
-    
-    grouped[monthKey].totalHours += demand.hours_consumed;
-    grouped[monthKey].count += 1;
-  });
-
-  return grouped;
-}
-
-// Prepare monthly chart data
-export function prepareMonthlyChartData(completedDemands: DemandWithHours[]) {
-  const groupedByMonth = groupDemandsByMonth(completedDemands);
-  
-  // Sort months chronologically
-  const sortedMonths = Object.keys(groupedByMonth).sort();
-  
-  // Prepare data for chart
-  return {
-    labels: sortedMonths.map(month => {
-      const [year, monthNum] = month.split('-');
-      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      return `${monthNames[parseInt(monthNum) - 1]}/${year.slice(2)}`;
-    }),
-    datasets: [
-      {
-        label: 'HpD (Horas por Demanda)',
-        data: sortedMonths.map(month => {
-          const { totalHours, count } = groupedByMonth[month];
-          return count > 0 ? (totalHours / count) : 0;
-        }),
-        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-        borderColor: 'rgb(59, 130, 246)',
-        borderWidth: 1
-      }
-    ]
-  };
-} 
