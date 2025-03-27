@@ -26,10 +26,16 @@ export type Demand = {
   ageing: number;
 };
 
-export type Column = {
+export type SubColumn = {
   id: string;
   title: string;
   demands: Demand[];
+};
+
+export type Column = {
+  id: string;
+  title: string;
+  subColumns: SubColumn[];
   group?: string;
 };
 
@@ -37,228 +43,236 @@ const initialBoardData: Column[] = [
   {
     id: "backlog",
     title: "Backlog",
-    demands: [
+    subColumns: [
       {
-        id: "task-1",
-        title: "User profile settings",
-        demandId: "PRL-203",
-        epic: "User Management",
-        type: "feature",
-        serviceClass: "standard",
-        createdAt: new Date("2024-03-15"),
-        isBlocked: false,
-        ageing: 11,
-      },
-      {
-        id: "task-2",
-        title: "Fix login page crash",
-        demandId: "PRL-204",
-        epic: "User Management",
-        type: "bug",
-        serviceClass: "expedite",
-        createdAt: new Date("2024-03-25"),
-        isBlocked: true,
-        blockingReason: "Waiting for API update",
-        blockingDemands: ["API-227", "PERF-118"],
-        ageing: 1,
-      },
-    ],
-    group: "discovery",
-  },
-  {
-    id: "ready-for-analysis",
-    title: "Ready for Analysis",
-    demands: [
-      {
-        id: "task-3",
-        title: "Payment gateway integration",
-        demandId: "CHK-101",
-        epic: "Checkout",
-        type: "feature",
-        serviceClass: "fixed-date",
-        createdAt: new Date("2024-03-20"),
-        dueDate: new Date("2024-04-15"),
-        isBlocked: false,
-        ageing: 6,
-      },
-    ],
-    group: "discovery",
-  },
-  {
-    id: "in-analysis",
-    title: "In Analysis",
-    demands: [
-      {
-        id: "task-4",
-        title: "Product search optimization",
-        demandId: "SRC-427",
-        epic: "Search",
-        type: "feature",
-        serviceClass: "standard",
-        assignees: [
+        id: "backlog-items",
+        title: "Items",
+        demands: [
           {
-            name: "Alice Cooper",
-            avatar: "https://ui-avatars.com/api/?name=Alice+Cooper",
+            id: "task-1",
+            title: "User profile settings",
+            demandId: "PRL-203",
+            epic: "User Management",
+            type: "feature",
+            serviceClass: "standard",
+            createdAt: new Date("2024-03-15"),
+            isBlocked: false,
+            ageing: 11,
+          },
+          {
+            id: "task-2",
+            title: "Fix login page crash",
+            demandId: "PRL-204",
+            epic: "User Management",
+            type: "bug",
+            serviceClass: "expedite",
+            createdAt: new Date("2024-03-25"),
+            isBlocked: true,
+            blockingReason: "Waiting for API update",
+            blockingDemands: ["API-227", "PERF-118"],
+            ageing: 1,
           },
         ],
-        createdAt: new Date("2024-03-22"),
-        isBlocked: false,
-        ageing: 4,
       },
     ],
     group: "discovery",
   },
   {
-    id: "options",
-    title: "Options",
-    demands: [
+    id: "analysis",
+    title: "Analysis",
+    subColumns: [
       {
-        id: "task-5",
-        title: "Mobile app UI redesign",
-        demandId: "MOB-155",
-        epic: "Mobile Experience",
-        type: "feature",
-        serviceClass: "intangible",
-        assignees: [
+        id: "analysis-ready",
+        title: "Ready",
+        demands: [
           {
-            name: "Bob Smith",
-            avatar: "https://ui-avatars.com/api/?name=Bob+Smith",
+            id: "task-3",
+            title: "Payment gateway integration",
+            demandId: "CHK-101",
+            epic: "Checkout",
+            type: "feature",
+            serviceClass: "fixed-date",
+            createdAt: new Date("2024-03-20"),
+            dueDate: new Date("2024-04-15"),
+            isBlocked: false,
+            ageing: 6,
           },
         ],
-        createdAt: new Date("2024-03-18"),
-        isBlocked: false,
-        ageing: 8,
+      },
+      {
+        id: "analysis-in-progress",
+        title: "In Progress",
+        demands: [
+          {
+            id: "task-4",
+            title: "Product search optimization",
+            demandId: "SRC-427",
+            epic: "Search",
+            type: "feature",
+            serviceClass: "standard",
+            assignees: [
+              {
+                name: "Alice Cooper",
+                avatar: "https://ui-avatars.com/api/?name=Alice+Cooper",
+              },
+            ],
+            createdAt: new Date("2024-03-22"),
+            isBlocked: false,
+            ageing: 4,
+          },
+        ],
       },
     ],
     group: "discovery",
   },
   {
-    id: "ready-for-dev",
-    title: "Ready for Dev",
-    demands: [
+    id: "development",
+    title: "Development",
+    subColumns: [
       {
-        id: "task-6",
-        title: "Implement user authentication",
-        demandId: "AUTH-320",
-        epic: "User Management",
-        type: "feature",
-        serviceClass: "standard",
-        createdAt: new Date("2024-03-21"),
-        isBlocked: false,
-        ageing: 5,
+        id: "development-ready",
+        title: "Ready",
+        demands: [
+          {
+            id: "task-6",
+            title: "Implement user authentication",
+            demandId: "AUTH-320",
+            epic: "User Management",
+            type: "feature",
+            serviceClass: "standard",
+            createdAt: new Date("2024-03-21"),
+            isBlocked: false,
+            ageing: 5,
+          },
+          {
+            id: "task-7",
+            title: "Fix registration form validation",
+            demandId: "AUTH-321",
+            epic: "User Management",
+            type: "bug",
+            serviceClass: "expedite",
+            createdAt: new Date("2024-03-24"),
+            isBlocked: false,
+            ageing: 2,
+          },
+        ],
       },
       {
-        id: "task-7",
-        title: "Fix registration form validation",
-        demandId: "AUTH-321",
-        epic: "User Management",
-        type: "bug",
-        serviceClass: "expedite",
-        createdAt: new Date("2024-03-24"),
-        isBlocked: false,
-        ageing: 2,
+        id: "development-in-progress",
+        title: "In Progress",
+        demands: [
+          {
+            id: "task-8",
+            title: "Database optimization",
+            demandId: "PERF-118",
+            epic: "Performance",
+            type: "chore",
+            serviceClass: "intangible",
+            assignees: [
+              {
+                name: "John Doe",
+                avatar: "https://ui-avatars.com/api/?name=John+Doe",
+              },
+              {
+                name: "Alice Cooper",
+                avatar: "https://ui-avatars.com/api/?name=Alice+Cooper",
+              },
+            ],
+            createdAt: new Date("2024-03-22"),
+            dueDate: new Date("2024-03-28"),
+            isBlocked: false,
+            ageing: 4,
+          },
+        ],
       },
     ],
     group: "development",
   },
   {
-    id: "in-dev",
-    title: "In Development",
-    demands: [
+    id: "review",
+    title: "Review",
+    subColumns: [
       {
-        id: "task-8",
-        title: "Database optimization",
-        demandId: "PERF-118",
-        epic: "Performance",
-        type: "chore",
-        serviceClass: "intangible",
-        assignees: [
+        id: "review-ready",
+        title: "Ready",
+        demands: [
           {
-            name: "John Doe",
-            avatar: "https://ui-avatars.com/api/?name=John+Doe",
-          },
-          {
-            name: "Alice Cooper",
-            avatar: "https://ui-avatars.com/api/?name=Alice+Cooper",
+            id: "task-9",
+            title: "User registration endpoint",
+            demandId: "API-227",
+            epic: "API Development",
+            type: "feature",
+            serviceClass: "standard",
+            assignees: [
+              {
+                name: "Emily Davis",
+                avatar: "https://ui-avatars.com/api/?name=Emily+Davis",
+              },
+            ],
+            createdAt: new Date("2024-03-19"),
+            isBlocked: false,
+            ageing: 7,
           },
         ],
-        createdAt: new Date("2024-03-22"),
-        dueDate: new Date("2024-03-28"),
-        isBlocked: false,
-        ageing: 4,
       },
-    ],
-    group: "development",
-  },
-  {
-    id: "ready-for-review",
-    title: "Ready for Review",
-    demands: [
       {
-        id: "task-9",
-        title: "User registration endpoint",
-        demandId: "API-227",
-        epic: "API Development",
-        type: "feature",
-        serviceClass: "standard",
-        assignees: [
+        id: "review-in-progress",
+        title: "In Progress",
+        demands: [
           {
-            name: "Emily Davis",
-            avatar: "https://ui-avatars.com/api/?name=Emily+Davis",
+            id: "task-10",
+            title: "Shopping cart functionality",
+            demandId: "CHK-103",
+            epic: "Checkout",
+            type: "feature",
+            serviceClass: "standard",
+            assignees: [
+              {
+                name: "Michael Johnson",
+                avatar: "https://ui-avatars.com/api/?name=Michael+Johnson",
+              },
+            ],
+            createdAt: new Date("2024-03-23"),
+            isBlocked: false,
+            ageing: 3,
           },
         ],
-        createdAt: new Date("2024-03-19"),
-        isBlocked: false,
-        ageing: 7,
-      },
-    ],
-    group: "review",
-  },
-  {
-    id: "in-review",
-    title: "In Review",
-    demands: [
-      {
-        id: "task-10",
-        title: "Shopping cart functionality",
-        demandId: "CHK-103",
-        epic: "Checkout",
-        type: "feature",
-        serviceClass: "standard",
-        assignees: [
-          {
-            name: "Michael Johnson",
-            avatar: "https://ui-avatars.com/api/?name=Michael+Johnson",
-          },
-        ],
-        createdAt: new Date("2024-03-23"),
-        isBlocked: false,
-        ageing: 3,
       },
     ],
     group: "review",
   },
   {
-    id: "ready-for-deploy",
-    title: "Ready for Deploy",
-    demands: [
+    id: "deployment",
+    title: "Deployment",
+    subColumns: [
       {
-        id: "task-11",
-        title: "Customer dashboard",
-        demandId: "USR-099",
-        epic: "User Management",
-        type: "feature",
-        serviceClass: "fixed-date",
-        assignees: [
+        id: "deployment-ready",
+        title: "Ready",
+        demands: [
           {
-            name: "Sarah Williams",
-            avatar: "https://ui-avatars.com/api/?name=Sarah+Williams",
+            id: "task-11",
+            title: "Customer dashboard",
+            demandId: "USR-099",
+            epic: "User Management",
+            type: "feature",
+            serviceClass: "fixed-date",
+            assignees: [
+              {
+                name: "Sarah Williams",
+                avatar: "https://ui-avatars.com/api/?name=Sarah+Williams",
+              },
+            ],
+            createdAt: new Date("2024-03-17"),
+            dueDate: new Date("2024-03-27"),
+            isBlocked: false,
+            ageing: 9,
           },
         ],
-        createdAt: new Date("2024-03-17"),
-        dueDate: new Date("2024-03-27"),
-        isBlocked: false,
-        ageing: 9,
+      },
+      {
+        id: "deployment-in-progress",
+        title: "In Progress",
+        demands: [],
       },
     ],
     group: "deployment",
@@ -266,40 +280,46 @@ const initialBoardData: Column[] = [
   {
     id: "done",
     title: "Done",
-    demands: [
+    subColumns: [
       {
-        id: "task-12",
-        title: "API documentation",
-        demandId: "DOC-435",
-        epic: "Documentation",
-        type: "chore",
-        serviceClass: "standard",
-        assignees: [
+        id: "done-completed",
+        title: "Completed",
+        demands: [
           {
-            name: "Jane Smith",
-            avatar: "https://ui-avatars.com/api/?name=Jane+Smith",
+            id: "task-12",
+            title: "API documentation",
+            demandId: "DOC-435",
+            epic: "Documentation",
+            type: "chore",
+            serviceClass: "standard",
+            assignees: [
+              {
+                name: "Jane Smith",
+                avatar: "https://ui-avatars.com/api/?name=Jane+Smith",
+              },
+            ],
+            createdAt: new Date("2024-03-15"),
+            isBlocked: false,
+            ageing: 11,
+          },
+          {
+            id: "task-13",
+            title: "Password reset functionality",
+            demandId: "USR-105",
+            epic: "User Management",
+            type: "feature",
+            serviceClass: "standard",
+            assignees: [
+              {
+                name: "David Brown",
+                avatar: "https://ui-avatars.com/api/?name=David+Brown",
+              },
+            ],
+            createdAt: new Date("2024-03-16"),
+            isBlocked: false,
+            ageing: 10,
           },
         ],
-        createdAt: new Date("2024-03-15"),
-        isBlocked: false,
-        ageing: 11,
-      },
-      {
-        id: "task-13",
-        title: "Password reset functionality",
-        demandId: "USR-105",
-        epic: "User Management",
-        type: "feature",
-        serviceClass: "standard",
-        assignees: [
-          {
-            name: "David Brown",
-            avatar: "https://ui-avatars.com/api/?name=David+Brown",
-          },
-        ],
-        createdAt: new Date("2024-03-16"),
-        isBlocked: false,
-        ageing: 10,
       },
     ],
     group: "deployment",
