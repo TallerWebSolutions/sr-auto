@@ -6,23 +6,19 @@ interface ContractEffortSummaryProps {
   contractData: {
     totalEffort: number;
     demandsCount: number;
-    contract: {
-      start_date: string;
-      end_date: string;
-      total_hours: number;
-    };
+    totalHours: number;
   };
 }
 
 export function ContractEffortSummary({
-  contractData
+  contractData,
 }: ContractEffortSummaryProps) {
   return (
     <div className="grid gap-6 grid-cols-1">
       <ContractDoughnutChart
         totalHoursConsumed={contractData.totalEffort}
-        hoursRemaining={contractData.contract.total_hours - contractData.totalEffort}
-        contractTotalHours={contractData.contract.total_hours}
+        hoursRemaining={contractData.totalHours - contractData.totalEffort}
+        totalHours={contractData.totalHours}
       />
       <MetricCard
         title="HpD (Horas por Demanda)"

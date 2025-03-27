@@ -146,11 +146,7 @@ export default function HourConsumptionPage() {
           contractData={{
             totalEffort,
             demandsCount,
-            contract: {
-              total_hours: totalContractHours,
-              start_date: contract.start_date,
-              end_date: contract.end_date,
-            },
+            totalHours: totalContractHours,
           }}
         />
         <HoursBurnupChart

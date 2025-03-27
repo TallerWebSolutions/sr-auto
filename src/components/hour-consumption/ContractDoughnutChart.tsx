@@ -14,18 +14,16 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 interface ContractDoughnutChartProps {
   totalHoursConsumed: number;
   hoursRemaining: number;
-  contractTotalHours: number;
-  activeContractsCount?: number;
+  totalHours: number;
 }
 
 export function ContractDoughnutChart({
   totalHoursConsumed,
   hoursRemaining,
-  contractTotalHours,
-  activeContractsCount = 1,
+  totalHours,
 }: ContractDoughnutChartProps) {
   const usedPercentage = Math.round(
-    (totalHoursConsumed / contractTotalHours) * 100
+    (totalHoursConsumed / totalHours) * 100
   );
 
   const centerTextPlugin: Plugin<"doughnut"> = {
@@ -90,10 +88,7 @@ export function ContractDoughnutChart({
     cutout: "75%",
   };
 
-  const contractTitle =
-    activeContractsCount > 1
-      ? `Consumo dos ${activeContractsCount} Contratos`
-      : "Consumo do Contrato";
+  const contractTitle = "Consumo do Contrato";
 
   return (
     <div className="p-6 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-md">
@@ -106,7 +101,7 @@ export function ContractDoughnutChart({
               Total Contratado
             </span>
             <span className="text-blue-900 font-bold text-2xl">
-              {contractTotalHours.toFixed(0)}h
+              {totalHours.toFixed(0)}h
             </span>
           </div>
         </div>
