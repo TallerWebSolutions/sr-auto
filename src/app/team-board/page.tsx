@@ -274,7 +274,6 @@ export default function TeamBoard() {
                 <div
                   key={column.id}
                   className="bg-gray-50/50 rounded-lg p-4 flex-shrink-0 flex flex-col h-[calc(100vh-178px)]"
-                  style={{ width: "600px" }}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-medium text-gray-500 text-sm">
@@ -292,6 +291,7 @@ export default function TeamBoard() {
                       <div
                         key={subColumn.id}
                         className="flex-1 flex flex-col min-h-0 bg-white rounded-lg shadow-sm"
+                        style={{ width: "280px" }}
                       >
                         <div className="p-3 border-b">
                           <h4 className="text-sm font-semibold text-gray-700">

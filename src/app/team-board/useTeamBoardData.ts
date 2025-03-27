@@ -82,24 +82,6 @@ const initialBoardData: Column[] = [
     title: "Analysis",
     subColumns: [
       {
-        id: "analysis-ready",
-        title: "Ready",
-        demands: [
-          {
-            id: "task-3",
-            title: "Payment gateway integration",
-            demandId: "CHK-101",
-            epic: "Checkout",
-            type: "feature",
-            serviceClass: "fixed-date",
-            createdAt: new Date("2024-03-20"),
-            dueDate: new Date("2024-04-15"),
-            isBlocked: false,
-            ageing: 6,
-          },
-        ],
-      },
-      {
         id: "analysis-in-progress",
         title: "In Progress",
         demands: [
@@ -122,6 +104,24 @@ const initialBoardData: Column[] = [
           },
         ],
       },
+      {
+        id: "analysis-done",
+        title: "Done",
+        demands: [
+          {
+            id: "task-3",
+            title: "Payment gateway integration",
+            demandId: "CHK-101",
+            epic: "Checkout",
+            type: "feature",
+            serviceClass: "fixed-date",
+            createdAt: new Date("2024-03-20"),
+            dueDate: new Date("2024-04-15"),
+            isBlocked: false,
+            ageing: 6,
+          },
+        ],
+      },
     ],
     group: "discovery",
   },
@@ -129,34 +129,6 @@ const initialBoardData: Column[] = [
     id: "development",
     title: "Development",
     subColumns: [
-      {
-        id: "development-ready",
-        title: "Ready",
-        demands: [
-          {
-            id: "task-6",
-            title: "Implement user authentication",
-            demandId: "AUTH-320",
-            epic: "User Management",
-            type: "feature",
-            serviceClass: "standard",
-            createdAt: new Date("2024-03-21"),
-            isBlocked: false,
-            ageing: 5,
-          },
-          {
-            id: "task-7",
-            title: "Fix registration form validation",
-            demandId: "AUTH-321",
-            epic: "User Management",
-            type: "bug",
-            serviceClass: "expedite",
-            createdAt: new Date("2024-03-24"),
-            isBlocked: false,
-            ageing: 2,
-          },
-        ],
-      },
       {
         id: "development-in-progress",
         title: "In Progress",
@@ -185,6 +157,34 @@ const initialBoardData: Column[] = [
           },
         ],
       },
+      {
+        id: "development-done",
+        title: "Done",
+        demands: [
+          {
+            id: "task-6",
+            title: "Implement user authentication",
+            demandId: "AUTH-320",
+            epic: "User Management",
+            type: "feature",
+            serviceClass: "standard",
+            createdAt: new Date("2024-03-21"),
+            isBlocked: false,
+            ageing: 5,
+          },
+          {
+            id: "task-7",
+            title: "Fix registration form validation",
+            demandId: "AUTH-321",
+            epic: "User Management",
+            type: "bug",
+            serviceClass: "expedite",
+            createdAt: new Date("2024-03-24"),
+            isBlocked: false,
+            ageing: 2,
+          },
+        ],
+      },
     ],
     group: "development",
   },
@@ -192,29 +192,6 @@ const initialBoardData: Column[] = [
     id: "review",
     title: "Review",
     subColumns: [
-      {
-        id: "review-ready",
-        title: "Ready",
-        demands: [
-          {
-            id: "task-9",
-            title: "User registration endpoint",
-            demandId: "API-227",
-            epic: "API Development",
-            type: "feature",
-            serviceClass: "standard",
-            assignees: [
-              {
-                name: "Emily Davis",
-                avatar: "https://ui-avatars.com/api/?name=Emily+Davis",
-              },
-            ],
-            createdAt: new Date("2024-03-19"),
-            isBlocked: false,
-            ageing: 7,
-          },
-        ],
-      },
       {
         id: "review-in-progress",
         title: "In Progress",
@@ -238,6 +215,29 @@ const initialBoardData: Column[] = [
           },
         ],
       },
+      {
+        id: "review-done",
+        title: "Done",
+        demands: [
+          {
+            id: "task-9",
+            title: "User registration endpoint",
+            demandId: "API-227",
+            epic: "API Development",
+            type: "feature",
+            serviceClass: "standard",
+            assignees: [
+              {
+                name: "Emily Davis",
+                avatar: "https://ui-avatars.com/api/?name=Emily+Davis",
+              },
+            ],
+            createdAt: new Date("2024-03-19"),
+            isBlocked: false,
+            ageing: 7,
+          },
+        ],
+      },
     ],
     group: "review",
   },
@@ -246,34 +246,10 @@ const initialBoardData: Column[] = [
     title: "Deployment",
     subColumns: [
       {
-        id: "deployment-ready",
-        title: "Ready",
-        demands: [
-          {
-            id: "task-11",
-            title: "Customer dashboard",
-            demandId: "USR-099",
-            epic: "User Management",
-            type: "feature",
-            serviceClass: "fixed-date",
-            assignees: [
-              {
-                name: "Sarah Williams",
-                avatar: "https://ui-avatars.com/api/?name=Sarah+Williams",
-              },
-            ],
-            createdAt: new Date("2024-03-17"),
-            dueDate: new Date("2024-03-27"),
-            isBlocked: false,
-            ageing: 9,
-          },
-        ],
-      },
-      {
         id: "deployment-in-progress",
         title: "In Progress",
         demands: [],
-      },
+      }
     ],
     group: "deployment",
   },
