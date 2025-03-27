@@ -8,7 +8,7 @@ export * from "./EmptyState";
 export { formatDate } from "./utils";
 export type { WeeklyHoursData } from "./utils";
 export {
-  processWeeklyHoursFromContract,
+  processWeeklyHoursFromContractData,
   getCurrentWeekIndex,
   calculateHoursNeeded,
 } from "./dataProcessing";

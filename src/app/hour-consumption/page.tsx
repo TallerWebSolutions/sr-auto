@@ -22,10 +22,11 @@ import {
   LoadingState,
   ErrorState,
   formatDate,
-  processWeeklyHoursFromContract,
+  processWeeklyHoursFromContractData,
   WeeklyHoursData
 } from "@/components/hour-consumption";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
+import { getContractTotalEffort } from "@/services/contractEffortService";
 
 ChartJS.register(
   CategoryScale,
@@ -57,6 +58,8 @@ export default function HourConsumptionPage() {
       end_date: string;
       total_hours: number;
     };
+    totalEffort: number;
+    demandsCount: number;
   } | null>(null);
   
   useEffect(() => {
@@ -67,8 +70,17 @@ export default function HourConsumptionPage() {
       setError(null);
       
       try {
-        const data = await processWeeklyHoursFromContract(Number(contractId));
-        setContractData(data);
+        // Buscar os dados do contrato apenas uma vez
+        const contractEffortData = await getContractTotalEffort(Number(contractId));
+        
+        // Processar os dados para o gráfico de burnup com os dados já buscados
+        const processedData = processWeeklyHoursFromContractData(contractEffortData);
+        
+        setContractData({
+          ...processedData,
+          totalEffort: contractEffortData.totalEffort,
+          demandsCount: contractEffortData.demandsCount
+        });
       } catch (err) {
         console.error("Error fetching contract data:", err);
         setError(err instanceof Error ? err : new Error("Unknown error occurred"));
@@ -108,7 +120,9 @@ export default function HourConsumptionPage() {
     currentWeekIndex, 
     hoursNeeded, 
     totalContractHours, 
-    contract 
+    contract,
+    totalEffort,
+    demandsCount
   } = contractData;
 
   return (
@@ -125,7 +139,17 @@ export default function HourConsumptionPage() {
       </div>
 
       <div className="grid gap-6 grid-cols-4 my-8">
-        <ContractEffortSummary contractId={Number(contractId)} />
+        <ContractEffortSummary 
+          contractData={{
+            totalEffort,
+            demandsCount,
+            contract: {
+              total_hours: totalContractHours,
+              start_date: contract.start_date,
+              end_date: contract.end_date
+            }
+          }}
+        />
         <HoursBurnupChart
           weeklyHoursData={weeklyHoursData}
           currentWeekIndex={currentWeekIndex}

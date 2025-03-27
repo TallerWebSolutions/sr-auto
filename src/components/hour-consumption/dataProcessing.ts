@@ -1,5 +1,4 @@
 import { WeeklyHoursData, getWeekNumber, formatWeekLabel } from './utils';
-import { getContractTotalEffort } from '@/services/contractEffortService';
 
 interface ContractsData {
   contracts: {
@@ -112,7 +111,12 @@ function processEffortsToWeeklyData(
   return weeks;
 }
 
-export async function processWeeklyHoursFromContract(contractId: number): Promise<{
+export function processWeeklyHoursFromContractData(
+  contractEffortData: {
+    demandEfforts: { effort_value: number; start_time_to_computation: string }[];
+    contract: { start_date: string; end_date: string; total_hours: number };
+  }
+): {
   weeklyHoursData: WeeklyHoursData[];
   currentWeekIndex: number;
   hoursNeeded: number;
@@ -122,12 +126,10 @@ export async function processWeeklyHoursFromContract(contractId: number): Promis
     end_date: string;
     total_hours: number;
   };
-}> {
-  const contractData = await getContractTotalEffort(contractId);
-  
+} {
   const weeklyHoursData = processEffortsToWeeklyData(
-    contractData.demandEfforts,
-    contractData.contract
+    contractEffortData.demandEfforts,
+    contractEffortData.contract
   );
   
   const currentWeekIndex = getCurrentWeekIndex(weeklyHoursData);
@@ -135,15 +137,15 @@ export async function processWeeklyHoursFromContract(contractId: number): Promis
   const hoursNeeded = calculateHoursNeeded(
     weeklyHoursData,
     currentWeekIndex,
-    contractData.contract.total_hours
+    contractEffortData.contract.total_hours
   );
   
   return {
     weeklyHoursData,
     currentWeekIndex,
     hoursNeeded,
-    totalContractHours: contractData.contract.total_hours,
-    contract: contractData.contract
+    totalContractHours: contractEffortData.contract.total_hours,
+    contract: contractEffortData.contract
   };
 }
 
