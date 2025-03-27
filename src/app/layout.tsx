@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ApolloWrapper } from "@/lib/apollo-provider";
-import Link from "next/link";
+import { Sidebar, SidebarProvider, SidebarToggle } from "@/components/ui/sidebar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,41 +19,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <nav className="bg-gray-800 text-white p-4">
-          <div className="container mx-auto flex gap-4">
-            <Link href="/" className="hover:text-gray-300">
-              Home
-            </Link>
-            <Link href="/demands" className="hover:text-gray-300">
-              Demands
-            </Link>
-            <Link href="/board" className="hover:text-gray-300">
-              Board
-            </Link>
-            <Link href="/team-board" className="hover:text-gray-300">
-              Team Board
-            </Link>
-            <Link href="/lead-times" className="hover:text-gray-300">
-              Lead Times
-            </Link>
-            <Link href="/hour-consumption" className="hover:text-gray-300">
-              Consumo de Horas
-            </Link>
-            <Link href="/escopo" className="hover:text-gray-300">
-              Escopo
-            </Link>
-            <Link href="/status-report" className="hover:text-gray-300">
-              Status Report
-            </Link>
-            <Link href="/portfolio-units" className="hover:text-gray-300">
-              Unidades de Portfolio
-            </Link>
-            <Link href="/priorizacao" className="hover:text-gray-300">
-              Priorização
-            </Link>
+        <SidebarProvider>
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <div className="flex-1 transition-all duration-300">
+              <SidebarToggle />
+              <main className="p-4 md:p-6">
+                <ApolloWrapper>{children}</ApolloWrapper>
+              </main>
+            </div>
           </div>
-        </nav>
-        <ApolloWrapper>{children}</ApolloWrapper>
+        </SidebarProvider>
       </body>
     </html>
   );
