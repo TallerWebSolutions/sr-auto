@@ -21,23 +21,70 @@ import {
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
+const DEMAND_TYPE_CONFIG = {
+  feature: {
+    background: "bg-green-100",
+    text: "text-green-800",
+    border: "border-l-4 border-l-green-500",
+    hoverBorder: "hover:border-green-500",
+    icon: "❇️",
+    description: "New functionality or enhancement"
+  },
+  chore: {
+    background: "bg-yellow-100",
+    text: "text-yellow-800",
+    border: "border-l-4 border-l-yellow-500",
+    hoverBorder: "hover:border-yellow-500",
+    icon: "🔧",
+    description: "Technical task or maintenance work"
+  },
+  bug: {
+    background: "bg-red-100",
+    text: "text-red-800",
+    border: "border-l-4 border-l-red-500",
+    hoverBorder: "hover:border-red-500",
+    icon: "🔴",
+    description: "Fix for a defect or issue"
+  }
+};
+
+const SERVICE_CLASS_CONFIG = {
+  expedite: {
+    background: "bg-red-100",
+    text: "text-red-800",
+    icon: "🔥",
+    description: "Highest priority, bypass regular flow"
+  },
+  standard: {
+    background: "bg-gray-100",
+    text: "text-gray-800",
+    icon: "📋",
+    description: "Normal priority work"
+  },
+  "fixed-date": {
+    background: "bg-gray-100",
+    text: "text-gray-800",
+    icon: "📅",
+    description: "Must be completed by a specific date"
+  }
+};
+
 const getServiceClassColor = (serviceClass: ServiceClass): string => {
-  const colors = {
-    expedite: "bg-red-100 text-red-800",
-    standard: "bg-blue-100 text-blue-800",
-    intangible: "bg-purple-100 text-purple-800",
-    "fixed-date": "bg-gray-100 text-gray-800",
-  };
-  return colors[serviceClass];
+  const config = SERVICE_CLASS_CONFIG[serviceClass];
+  return `${config.background} ${config.text}`;
 };
 
 const getDemandTypeColor = (type: DemandType): string => {
-  const colors = {
-    feature: "bg-blue-100 text-blue-800",
-    chore: "bg-gray-100 text-gray-800",
-    bug: "bg-red-100 text-red-800",
-  };
-  return colors[type];
+  const config = DEMAND_TYPE_CONFIG[type];
+  return `${config.background} ${config.text}`;
+};
+
+const getDemandTypeBorderColor = (type: DemandType): string => {
+  return DEMAND_TYPE_CONFIG[type].border;
+};
+
+const getDemandTypeHoverBorder = (type: DemandType): string => {
+  return DEMAND_TYPE_CONFIG[type].hoverBorder;
 };
 
 const getDueDateColor = (dueDate?: Date): string => {
@@ -48,41 +95,19 @@ const getDueDateColor = (dueDate?: Date): string => {
 };
 
 const getDemandTypeIcon = (type: DemandType): string => {
-  const icons = {
-    feature: "⭐️",
-    chore: "🔧",
-    bug: "🐛",
-  };
-  return icons[type];
+  return DEMAND_TYPE_CONFIG[type].icon;
 };
 
 const getDemandTypeDescription = (type: DemandType): string => {
-  const descriptions = {
-    feature: "New functionality or enhancement",
-    chore: "Technical task or maintenance work",
-    bug: "Fix for a defect or issue",
-  };
-  return descriptions[type];
+  return DEMAND_TYPE_CONFIG[type].description;
 };
 
 const getServiceClassIcon = (serviceClass: ServiceClass): string => {
-  const icons = {
-    expedite: "🔥",
-    standard: "📋",
-    intangible: "💡",
-    "fixed-date": "📅",
-  };
-  return icons[serviceClass];
+  return SERVICE_CLASS_CONFIG[serviceClass].icon;
 };
 
 const getServiceClassDescription = (serviceClass: ServiceClass): string => {
-  const descriptions = {
-    expedite: "Highest priority, bypass regular flow",
-    standard: "Normal priority work",
-    intangible: "Research, design or exploratory work",
-    "fixed-date": "Must be completed by a specific date",
-  };
-  return descriptions[serviceClass];
+  return SERVICE_CLASS_CONFIG[serviceClass].description;
 };
 
 const getAgeingTooltip = (days: number): string => {
@@ -384,7 +409,7 @@ export default function TeamBoard() {
                                           demand.isBlocked
                                             ? "border-red-300"
                                             : "border-gray-100"
-                                        } hover:border-blue-300 hover:shadow-md cursor-grab active:cursor-grabbing active:shadow-xl`}
+                                        } ${getDemandTypeBorderColor(demand.type)} ${getDemandTypeHoverBorder(demand.type)} hover:shadow-md cursor-grab active:cursor-grabbing active:shadow-xl`}
                                       >
                                         {/* Header Row with Type/Service Icons and Blocked Indicator */}
                                         <div className="flex items-center justify-between mt-auto">
