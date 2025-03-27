@@ -23,7 +23,7 @@ import {
   ErrorState,
   formatDate,
   processWeeklyHoursFromContractData,
-  WeeklyHoursData
+  WeeklyHoursData,
 } from "@/components/hour-consumption";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import { getContractTotalEffort } from "@/services/contractEffortService";
@@ -45,7 +45,7 @@ export default function HourConsumptionPage() {
   const searchParams = useSearchParams();
   const contractId = searchParams.get("contract_id") || "0";
   const isContractIdEmpty = !contractId || contractId === "0";
-  
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const [contractData, setContractData] = useState<{
@@ -61,34 +61,37 @@ export default function HourConsumptionPage() {
     totalEffort: number;
     demandsCount: number;
   } | null>(null);
-  
+
   useEffect(() => {
     async function fetchData() {
       if (isContractIdEmpty) return;
-      
+
       setIsLoading(true);
       setError(null);
-      
+
       try {
-        // Buscar os dados do contrato apenas uma vez
-        const contractEffortData = await getContractTotalEffort(Number(contractId));
-        
-        // Processar os dados para o gráfico de burnup com os dados já buscados
-        const processedData = processWeeklyHoursFromContractData(contractEffortData);
-        
+        const contractEffortData = await getContractTotalEffort(
+          Number(contractId)
+        );
+
+        const processedData =
+          processWeeklyHoursFromContractData(contractEffortData);
+
         setContractData({
           ...processedData,
           totalEffort: contractEffortData.totalEffort,
-          demandsCount: contractEffortData.demandsCount
+          demandsCount: contractEffortData.demandsCount,
         });
       } catch (err) {
         console.error("Error fetching contract data:", err);
-        setError(err instanceof Error ? err : new Error("Unknown error occurred"));
+        setError(
+          err instanceof Error ? err : new Error("Unknown error occurred")
+        );
       } finally {
         setIsLoading(false);
       }
     }
-    
+
     fetchData();
   }, [contractId, isContractIdEmpty]);
 
@@ -110,19 +113,19 @@ export default function HourConsumptionPage() {
   if (error) {
     return <ErrorState error={error} />;
   }
-  
+
   if (!contractData) {
     return <ErrorState error={new Error("No contract data available")} />;
   }
-  
-  const { 
-    weeklyHoursData, 
-    currentWeekIndex, 
-    hoursNeeded, 
-    totalContractHours, 
+
+  const {
+    weeklyHoursData,
+    currentWeekIndex,
+    hoursNeeded,
+    totalContractHours,
     contract,
     totalEffort,
-    demandsCount
+    demandsCount,
   } = contractData;
 
   return (
@@ -139,15 +142,15 @@ export default function HourConsumptionPage() {
       </div>
 
       <div className="grid gap-6 grid-cols-4 my-8">
-        <ContractEffortSummary 
+        <ContractEffortSummary
           contractData={{
             totalEffort,
             demandsCount,
             contract: {
               total_hours: totalContractHours,
               start_date: contract.start_date,
-              end_date: contract.end_date
-            }
+              end_date: contract.end_date,
+            },
           }}
         />
         <HoursBurnupChart
