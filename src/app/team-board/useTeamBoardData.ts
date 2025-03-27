@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 export type ServiceClass =
   | "expedite"
   | "standard"
-  | "intangible"
   | "fixed-date";
 export type DemandType = "feature" | "chore" | "bug";
 
@@ -139,7 +138,7 @@ const initialBoardData: Column[] = [
             demandId: "PERF-118",
             epic: "Performance",
             type: "chore",
-            serviceClass: "intangible",
+            serviceClass: "standard",
             assignees: [
               {
                 name: "John Doe",
