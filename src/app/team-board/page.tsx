@@ -18,6 +18,8 @@ import {
   type ServiceClass,
   type DemandType,
 } from "./useTeamBoardData";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 const getServiceClassColor = (serviceClass: ServiceClass): string => {
   const colors = {
@@ -116,9 +118,33 @@ const getAgeDotColor = (ageingDays: number, dotIndex: number): string => {
   return "bg-gray-300";
 };
 
+const styles = {
+  rotate270: {
+    transform: "rotate(270deg)",
+    transformOrigin: "center",
+    whiteSpace: "nowrap",
+    marginTop: "50px",
+    marginBottom: "50px",
+    textAlign: "center" as const
+  }
+};
+
 export default function TeamBoard() {
   const { columns, updateColumns, isLoading, error, refreshData } =
     useTeamBoardData();
+  const [minimizedColumns, setMinimizedColumns] = useState<string[]>([]);
+
+  const toggleColumnMinimized = (columnId: string) => {
+    setMinimizedColumns(prev =>
+      prev.includes(columnId)
+        ? prev.filter(col => col !== columnId)
+        : [...prev, columnId]
+    );
+  };
+
+  const isColumnMinimized = (columnId: string) => {
+    return minimizedColumns.includes(columnId);
+  };
 
   const onDragEnd = (result: DropResult) => {
     const { destination, source } = result;
@@ -270,282 +296,321 @@ export default function TeamBoard() {
               className="flex flex-row gap-4 h-full"
               style={{ minWidth: "max-content" }}
             >
-              {columns.map((column) => (
-                <div
-                  key={column.id}
-                  className="bg-gray-50/50 rounded-lg p-4 flex-shrink-0 flex flex-col h-[calc(100vh-178px)]"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium text-gray-500 text-sm">
-                      {column.title}
-                    </h3>
-                    <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
-                      {column.subColumns.reduce(
-                        (acc, subCol) => acc + subCol.demands.length,
-                        0
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex-1 flex flex-row gap-4 overflow-y-auto pr-1">
-                    {column.subColumns.map((subColumn) => (
-                      <div
-                        key={subColumn.id}
-                        className="flex-1 flex flex-col min-h-0 bg-white rounded-lg shadow-sm"
-                        style={{ width: "280px" }}
+              {columns.map((column) => {
+                const isMinimized = isColumnMinimized(column.id);
+
+                if (isMinimized) {
+                  return (
+                    <div
+                      key={column.id}
+                      className="bg-gray-50/50 rounded-lg p-2 flex flex-col items-center justify-between"
+                      style={{ width: '40px', minHeight: '300px' }}
+                    >
+                      <button
+                        onClick={() => toggleColumnMinimized(column.id)}
+                        className="mb-2 p-1 rounded-full hover:bg-gray-200 mt-2"
+                        title={`Expandir ${column.title}`}
                       >
-                        <div className="p-3 border-b">
-                          <h4 className="text-sm font-semibold text-gray-700">
-                            {subColumn.title}
-                          </h4>
-                        </div>
-                        <Droppable droppableId={subColumn.id}>
-                          {(provided) => (
-                            <div
-                              {...provided.droppableProps}
-                              ref={provided.innerRef}
-                              className="flex-1 overflow-y-auto p-3 rounded-sm"
-                            >
-                              {subColumn.demands.map((demand, index) => (
-                                <Draggable
-                                  key={demand.id}
-                                  draggableId={demand.id}
-                                  index={index}
-                                >
-                                  {(provided) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      className={`bg-white p-4 mb-4 rounded-lg shadow-sm border ${
-                                        demand.isBlocked
-                                          ? "border-red-300"
-                                          : "border-gray-100"
-                                      } hover:border-blue-300 hover:shadow-md cursor-grab active:cursor-grabbing active:shadow-xl`}
-                                    >
-                                      {/* Header Row with Type/Service Icons and Blocked Indicator */}
-                                      <div className="flex items-center justify-between mt-auto">
-                                        <div className="flex items-center gap-2">
+                        <ChevronRight size={18} />
+                      </button>
+
+                      <div className="flex-grow flex flex-col justify-center">
+                        <div style={styles.rotate270} className="font-semibold text-xs">{column.title}</div>
+                      </div>
+
+                      <div className="mb-2 mt-auto font-semibold text-xs">
+                        ({column.subColumns.reduce((acc, subCol) => acc + subCol.demands.length, 0)})
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={column.id}
+                    className="bg-gray-50/50 rounded-lg p-4 flex-shrink-0 flex flex-col h-[calc(100vh-178px)]"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-medium text-gray-500 text-sm">
+                        {column.title}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+                          {column.subColumns.reduce(
+                            (acc, subCol) => acc + subCol.demands.length,
+                            0
+                          )}
+                        </span>
+                        <button
+                          onClick={() => toggleColumnMinimized(column.id)}
+                          className="p-1 rounded-full hover:bg-gray-200"
+                          title={`Minimizar ${column.title}`}
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex-1 flex flex-row gap-4 overflow-y-auto pr-1">
+                      {column.subColumns.map((subColumn) => (
+                        <div
+                          key={subColumn.id}
+                          className="flex-1 flex flex-col min-h-0 bg-white rounded-lg shadow-sm"
+                          style={{ width: "280px" }}
+                        >
+                          <div className="p-3 border-b">
+                            <h4 className="text-sm font-semibold text-gray-700">
+                              {subColumn.title}
+                            </h4>
+                          </div>
+                          <Droppable droppableId={subColumn.id}>
+                            {(provided) => (
+                              <div
+                                {...provided.droppableProps}
+                                ref={provided.innerRef}
+                                className="flex-1 overflow-y-auto p-3 rounded-sm"
+                              >
+                                {subColumn.demands.map((demand, index) => (
+                                  <Draggable
+                                    key={demand.id}
+                                    draggableId={demand.id}
+                                    index={index}
+                                  >
+                                    {(provided) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className={`bg-white p-4 mb-4 rounded-lg shadow-sm border ${
+                                          demand.isBlocked
+                                            ? "border-red-300"
+                                            : "border-gray-100"
+                                        } hover:border-blue-300 hover:shadow-md cursor-grab active:cursor-grabbing active:shadow-xl`}
+                                      >
+                                        {/* Header Row with Type/Service Icons and Blocked Indicator */}
+                                        <div className="flex items-center justify-between mt-auto">
+                                          <div className="flex items-center gap-2">
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span
+                                                  className={`text-sm px-1.5 py-0.5 rounded cursor-pointer ${getServiceClassColor(
+                                                    demand.serviceClass
+                                                  )}`}
+                                                >
+                                                  {getServiceClassIcon(
+                                                    demand.serviceClass
+                                                  )}
+                                                </span>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  <strong>
+                                                    {demand.serviceClass
+                                                      .charAt(0)
+                                                      .toUpperCase() +
+                                                      demand.serviceClass.slice(1)}
+                                                  </strong>
+                                                  <br />
+                                                  {getServiceClassDescription(
+                                                    demand.serviceClass
+                                                  )}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span
+                                                  className={`text-sm px-1.5 py-0.5 rounded cursor-default flex items-center ${getDemandTypeColor(
+                                                    demand.type
+                                                  )}`}
+                                                >
+                                                  {getDemandTypeIcon(demand.type)}
+                                                  <span className="text-[10px] font-medium ml-1 tracking-wider">
+                                                    #{demand.demandId}
+                                                  </span>
+                                                </span>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  <strong>
+                                                    {demand.type
+                                                      .charAt(0)
+                                                      .toUpperCase() +
+                                                      demand.type.slice(1)}
+                                                  </strong>
+                                                  <br />
+                                                  {getDemandTypeDescription(
+                                                    demand.type
+                                                  )}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </div>
+
+                                          {demand.isBlocked && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div className="bg-red-100 text-red-800 p-1 pb-0.5 rounded-lg shadow-sm flex items-center cursor-default">
+                                                  <span className="text-sm">🚫</span>
+                                                  {demand.blockingDemands &&
+                                                    demand.blockingDemands.length >
+                                                      0 && (
+                                                      <span className="ml-1 text-xs font-bold">
+                                                        {demand.blockingDemands.length}
+                                                      </span>
+                                                    )}
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <div>
+                                                  <strong>
+                                                    Blocked
+                                                    {demand.blockingReason
+                                                      ? `: ${demand.blockingReason}`
+                                                      : ""}
+                                                  </strong>
+
+                                                  {demand.blockingDemands &&
+                                                    demand.blockingDemands.length >
+                                                      0 && (
+                                                      <>
+                                                        <div className="mt-1">
+                                                          Blocked by{" "}
+                                                          {
+                                                            demand.blockingDemands
+                                                              .length
+                                                          }{" "}
+                                                          demand
+                                                          {demand.blockingDemands
+                                                            .length > 1
+                                                            ? "s"
+                                                            : ""}
+                                                          :
+                                                        </div>
+                                                        <ul className="list-disc pl-4 mt-1">
+                                                          {demand.blockingDemands.map(
+                                                            (id) => (
+                                                              <li key={id}>
+                                                                #{id}
+                                                              </li>
+                                                            )
+                                                          )}
+                                                        </ul>
+                                                      </>
+                                                    )}
+                                                </div>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                        </div>
+
+                                        {/* Epic Row */}
+                                        <div className="mb-1">
                                           <Tooltip>
                                             <TooltipTrigger asChild>
-                                              <span
-                                                className={`text-sm px-1.5 py-0.5 rounded cursor-pointer ${getServiceClassColor(
-                                                  demand.serviceClass
-                                                )}`}
-                                              >
-                                                {getServiceClassIcon(
-                                                  demand.serviceClass
-                                                )}
+                                              <span className="text-xs text-gray-500 truncate max-w-[220px] cursor-default">
+                                                {demand.epic}
                                               </span>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                              <p>
-                                                <strong>
-                                                  {demand.serviceClass
-                                                    .charAt(0)
-                                                    .toUpperCase() +
-                                                    demand.serviceClass.slice(1)}
-                                                </strong>
-                                                <br />
-                                                {getServiceClassDescription(
-                                                  demand.serviceClass
-                                                )}
-                                              </p>
+                                              <p>Epic: {demand.epic}</p>
                                             </TooltipContent>
                                           </Tooltip>
+                                        </div>
+
+                                        {/* Demand Title */}
+                                        <div className="font-medium mb-7 text-sm">
+                                          {demand.title}
+                                        </div>
+
+                                        {/* Assignees & Aging */}
+                                        <div className="flex items-center justify-between mt-3">
+                                          <div className="flex -space-x-1.5">
+                                            {demand.assignees?.map((assignee, idx) => (
+                                              <Tooltip key={idx}>
+                                                <TooltipTrigger asChild>
+                                                  <img
+                                                    src={assignee.avatar}
+                                                    alt={assignee.name}
+                                                    className="w-7 h-7 rounded-full border border-white cursor-default"
+                                                  />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p>{assignee.name}</p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            ))}
+                                          </div>
+
                                           <Tooltip>
                                             <TooltipTrigger asChild>
-                                              <span
-                                                className={`text-sm px-1.5 py-0.5 rounded cursor-default flex items-center ${getDemandTypeColor(
-                                                  demand.type
-                                                )}`}
-                                              >
-                                                {getDemandTypeIcon(demand.type)}
-                                                <span className="text-[10px] font-medium ml-1 tracking-wider">
-                                                  #{demand.demandId}
-                                                </span>
-                                              </span>
+                                              <div className="flex items-center gap-0.5 cursor-default">
+                                                {Array.from({
+                                                  length: Math.min(6, demand.ageing),
+                                                }).map((_, i) => {
+                                                  const dotColor = getAgeDotColor(
+                                                    demand.ageing,
+                                                    i
+                                                  );
+
+                                                  return (
+                                                    <div
+                                                      key={i}
+                                                      className={`w-1.5 h-1.5 rounded-full ${dotColor}`}
+                                                    />
+                                                  );
+                                                })}
+                                              </div>
                                             </TooltipTrigger>
                                             <TooltipContent>
                                               <p>
-                                                <strong>
-                                                  {demand.type
-                                                    .charAt(0)
-                                                    .toUpperCase() +
-                                                    demand.type.slice(1)}
-                                                </strong>
+                                                <strong>Age indicator</strong>
                                                 <br />
-                                                {getDemandTypeDescription(
-                                                  demand.type
-                                                )}
+                                                {getAgeingTooltip(demand.ageing)}
+                                                {demand.ageing >= 3 &&
+                                                  " - Needs attention!"}
                                               </p>
                                             </TooltipContent>
                                           </Tooltip>
                                         </div>
 
-                                        {demand.isBlocked && (
+                                        {/* Due Date - if exists */}
+                                        {demand.dueDate && (
                                           <Tooltip>
                                             <TooltipTrigger asChild>
-                                              <div className="bg-red-100 text-red-800 p-1 pb-0.5 rounded-lg shadow-sm flex items-center cursor-default">
-                                                <span className="text-sm">🚫</span>
-                                                {demand.blockingDemands &&
-                                                  demand.blockingDemands.length >
-                                                    0 && (
-                                                    <span className="ml-1 text-xs font-bold">
-                                                      {demand.blockingDemands.length}
-                                                    </span>
-                                                  )}
+                                              <div
+                                                className={`mt-4 text-xs px-3 py-1 text-center rounded cursor-default ${getDueDateColor(
+                                                  demand.dueDate
+                                                )}`}
+                                              >
+                                                Due: {format(demand.dueDate, "MMM d")}
                                               </div>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                              <div>
-                                                <strong>
-                                                  Blocked
-                                                  {demand.blockingReason
-                                                    ? `: ${demand.blockingReason}`
-                                                    : ""}
-                                                </strong>
-
-                                                {demand.blockingDemands &&
-                                                  demand.blockingDemands.length >
-                                                    0 && (
-                                                    <>
-                                                      <div className="mt-1">
-                                                        Blocked by{" "}
-                                                        {
-                                                          demand.blockingDemands
-                                                            .length
-                                                        }{" "}
-                                                        demand
-                                                        {demand.blockingDemands
-                                                          .length > 1
-                                                          ? "s"
-                                                          : ""}
-                                                        :
-                                                      </div>
-                                                      <ul className="list-disc pl-4 mt-1">
-                                                        {demand.blockingDemands.map(
-                                                          (id) => (
-                                                            <li key={id}>
-                                                              #{id}
-                                                            </li>
-                                                          )
-                                                        )}
-                                                      </ul>
-                                                    </>
-                                                  )}
-                                              </div>
+                                              <p>
+                                                <strong>Due date</strong>
+                                                <br />
+                                                {isPast(demand.dueDate)
+                                                  ? "Overdue!"
+                                                  : isToday(demand.dueDate)
+                                                  ? "Due today!"
+                                                  : "Upcoming deadline"}
+                                              </p>
                                             </TooltipContent>
                                           </Tooltip>
                                         )}
                                       </div>
-
-                                      {/* Epic Row */}
-                                      <div className="mb-1">
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className="text-xs text-gray-500 truncate max-w-[220px] cursor-default">
-                                              {demand.epic}
-                                            </span>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>Epic: {demand.epic}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </div>
-
-                                      {/* Demand Title */}
-                                      <div className="font-medium mb-7 text-sm">
-                                        {demand.title}
-                                      </div>
-
-                                      {/* Assignees & Aging */}
-                                      <div className="flex items-center justify-between mt-3">
-                                        <div className="flex -space-x-1.5">
-                                          {demand.assignees?.map((assignee, idx) => (
-                                            <Tooltip key={idx}>
-                                              <TooltipTrigger asChild>
-                                                <img
-                                                  src={assignee.avatar}
-                                                  alt={assignee.name}
-                                                  className="w-7 h-7 rounded-full border border-white cursor-default"
-                                                />
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p>{assignee.name}</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          ))}
-                                        </div>
-
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className="flex items-center gap-0.5 cursor-default">
-                                              {Array.from({
-                                                length: Math.min(6, demand.ageing),
-                                              }).map((_, i) => {
-                                                const dotColor = getAgeDotColor(
-                                                  demand.ageing,
-                                                  i
-                                                );
-
-                                                return (
-                                                  <div
-                                                    key={i}
-                                                    className={`w-1.5 h-1.5 rounded-full ${dotColor}`}
-                                                  />
-                                                );
-                                              })}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>
-                                              <strong>Age indicator</strong>
-                                              <br />
-                                              {getAgeingTooltip(demand.ageing)}
-                                              {demand.ageing >= 3 &&
-                                                " - Needs attention!"}
-                                            </p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </div>
-
-                                      {/* Due Date - if exists */}
-                                      {demand.dueDate && (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div
-                                              className={`mt-4 text-xs px-3 py-1 text-center rounded cursor-default ${getDueDateColor(
-                                                demand.dueDate
-                                              )}`}
-                                            >
-                                              Due: {format(demand.dueDate, "MMM d")}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>
-                                              <strong>Due date</strong>
-                                              <br />
-                                              {isPast(demand.dueDate)
-                                                ? "Overdue!"
-                                                : isToday(demand.dueDate)
-                                                ? "Due today!"
-                                                : "Upcoming deadline"}
-                                            </p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      )}
-                                    </div>
-                                  )}
-                                </Draggable>
-                              ))}
-                            </div>
-                          )}
-                        </Droppable>
-                      </div>
-                    ))}
+                                    )}
+                                  </Draggable>
+                                ))}
+                              </div>
+                            )}
+                          </Droppable>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </DragDropContext>
