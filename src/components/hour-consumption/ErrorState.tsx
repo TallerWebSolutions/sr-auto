@@ -2,7 +2,7 @@ import React from 'react';
 import { ApolloError } from '@apollo/client';
 
 interface ErrorStateProps {
-  error: ApolloError;
+  error: ApolloError | Error;
 }
 
 export function ErrorState({ error }: ErrorStateProps) {

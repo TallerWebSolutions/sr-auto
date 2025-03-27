@@ -1,18 +1,5 @@
 import { WeeklyHoursData, getWeekNumber, formatWeekLabel } from './utils';
-
-interface DemandsData {
-  demands: {
-    id: string;
-    slug: string;
-    demand_title: string;
-    commitment_date: string | null;
-    discarded_at: string | null;
-    end_date: string | null;
-    effort_upstream: number | null;
-    effort_downstream: number | null;
-    contract_id: number | null;
-  }[];
-}
+import { getContractTotalEffort } from '@/services/contractEffortService';
 
 interface ContractsData {
   contracts: {
@@ -49,18 +36,17 @@ export function getTotalHoursFromAllContracts(contractsData: ContractsData | und
   return activeContracts.reduce((total, contract) => total + contract.total_hours, 0);
 }
 
-export function processWeeklyHoursData(
-  demandsData: DemandsData | undefined,
-  activeContract: { start_date: string; end_date: string } | undefined,
-  totalContractHours: number = 0
+function processEffortsToWeeklyData(
+  efforts: { effort_value: number; start_time_to_computation: string }[],
+  contract: { start_date: string; end_date: string; total_hours: number },
 ): WeeklyHoursData[] {
-  if (!demandsData?.demands || demandsData.demands.length === 0 || !activeContract) {
+  if (!efforts.length || !contract) {
     return [];
   }
 
   const currentDate = new Date();
-  const earliestDate = new Date(activeContract.start_date);
-  const latestDate = new Date(activeContract.end_date);
+  const earliestDate = new Date(contract.start_date);
+  const latestDate = new Date(contract.end_date);
 
   const weeks: WeeklyHoursData[] = [];
   const [startWeekNum, startYear] = getWeekNumber(earliestDate);
@@ -72,7 +58,7 @@ export function processWeeklyHoursData(
   do {
     weeks.push({
       weekLabel: formatWeekLabel(weekNum, currentYear),
-      totalHours: totalContractHours,
+      totalHours: contract.total_hours,
       consumedHours: 0
     });
     
@@ -87,7 +73,7 @@ export function processWeeklyHoursData(
   if (weeks[weeks.length - 1].weekLabel !== lastWeekLabel) {
     weeks.push({
       weekLabel: lastWeekLabel,
-      totalHours: totalContractHours,
+      totalHours: contract.total_hours,
       consumedHours: 0
     });
   }
@@ -98,23 +84,16 @@ export function processWeeklyHoursData(
     weeklyHours[week.weekLabel] = 0;
   });
   
-  demandsData.demands.forEach(demand => {
-    const effortUpstream = demand.effort_upstream || 0;
-    const effortDownstream = demand.effort_downstream || 0;
-    const hoursConsumed = effortUpstream + effortDownstream;
+  efforts.forEach(effort => {
+    const hoursConsumed = effort.effort_value;
     
     if (hoursConsumed <= 0) return;
     
-    let demandDate;
-    if (demand.end_date) {
-      demandDate = new Date(demand.end_date);
-    } else if (demand.commitment_date) {
-      demandDate = new Date(demand.commitment_date);
-    } else {
-      demandDate = currentDate;
-    }
+    const effortDate = effort.start_time_to_computation 
+      ? new Date(effort.start_time_to_computation) 
+      : currentDate;
     
-    const [weekNum, year] = getWeekNumber(demandDate);
+    const [weekNum, year] = getWeekNumber(effortDate);
     const weekLabel = formatWeekLabel(weekNum, year);
     
     if (weeklyHours[weekLabel] !== undefined) {
@@ -131,6 +110,41 @@ export function processWeeklyHoursData(
   });
 
   return weeks;
+}
+
+export async function processWeeklyHoursFromContract(contractId: number): Promise<{
+  weeklyHoursData: WeeklyHoursData[];
+  currentWeekIndex: number;
+  hoursNeeded: number;
+  totalContractHours: number;
+  contract: {
+    start_date: string;
+    end_date: string;
+    total_hours: number;
+  };
+}> {
+  const contractData = await getContractTotalEffort(contractId);
+  
+  const weeklyHoursData = processEffortsToWeeklyData(
+    contractData.demandEfforts,
+    contractData.contract
+  );
+  
+  const currentWeekIndex = getCurrentWeekIndex(weeklyHoursData);
+  
+  const hoursNeeded = calculateHoursNeeded(
+    weeklyHoursData,
+    currentWeekIndex,
+    contractData.contract.total_hours
+  );
+  
+  return {
+    weeklyHoursData,
+    currentWeekIndex,
+    hoursNeeded,
+    totalContractHours: contractData.contract.total_hours,
+    contract: contractData.contract
+  };
 }
 
 // Find current week index for highlighting
