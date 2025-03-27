@@ -28,6 +28,13 @@ type ContractEffortsResponse = {
       };
     };
   };
+  finished_demands_efforts: {
+    aggregate: {
+      sum: {
+        effort_value: number;
+      };
+    };
+  };
 };
 
 type ContractEffortsResult = {
@@ -42,6 +49,7 @@ type ContractEffortsResult = {
   demandEfforts: DemandEffort[];
   totalEffort: number;
   demandsCount: number;
+  finishedDemandsEffort: number;
 };
 
 const CONTRACT_EFFORTS_QUERY = gql`
@@ -67,6 +75,15 @@ const CONTRACT_EFFORTS_QUERY = gql`
     }
     demand_efforts_aggregate(
       where: { demand: { contract_id: { _eq: $contractIdInt } } }
+    ) {
+      aggregate {
+        sum {
+          effort_value
+        }
+      }
+    }
+    finished_demands_efforts: demand_efforts_aggregate(
+      where: { demand: { contract_id: { _eq: $contractIdInt }, end_date: { _is_null: false } } }
     ) {
       aggregate {
         sum {
@@ -102,6 +119,8 @@ export async function getContractTotalEffort(
         data?.demand_efforts_aggregate?.aggregate?.sum?.effort_value ?? 0,
       demandsCount:
         data?.contracts_by_pk?.demands_aggregate?.aggregate?.count ?? 0,
+      finishedDemandsEffort:
+        data?.finished_demands_efforts?.aggregate?.sum?.effort_value ?? 0,
     };
   } catch (error) {
     console.error("Error fetching contract efforts:", error);
@@ -123,6 +142,7 @@ export async function getContractTotalEffort(
       demandEfforts: [],
       totalEffort: 0,
       demandsCount: 0,
+      finishedDemandsEffort: 0,
     };
   }
 }

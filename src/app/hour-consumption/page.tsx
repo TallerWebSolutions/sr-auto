@@ -60,6 +60,7 @@ export default function HourConsumptionPage() {
     };
     totalEffort: number;
     demandsCount: number;
+    finishedDemandsEffort: number;
     product: {
       name: string;
     };
@@ -84,6 +85,7 @@ export default function HourConsumptionPage() {
           ...processedData,
           totalEffort: contractEffortData.totalEffort,
           demandsCount: contractEffortData.demandsCount,
+          finishedDemandsEffort: contractEffortData.finishedDemandsEffort,
           product: contractEffortData.product,
         });
       } catch (err) {
@@ -130,6 +132,7 @@ export default function HourConsumptionPage() {
     contract,
     totalEffort,
     demandsCount,
+    finishedDemandsEffort,
     product,
   } = contractData;
 
@@ -147,11 +150,10 @@ export default function HourConsumptionPage() {
 
       <div className="grid gap-6 grid-cols-4 my-8">
         <ContractEffortSummary
-          contractData={{
-            totalEffort,
-            demandsCount,
-            totalHours: totalContractHours,
-          }}
+          totalEffort={totalEffort}
+          demandsCount={demandsCount}
+          totalHours={totalContractHours}
+          finishedDemandsEffort={finishedDemandsEffort}
         />
         <HoursBurnupChart
           weeklyHoursData={weeklyHoursData}

@@ -3,16 +3,15 @@ import { ContractDoughnutChart } from "@/components/hour-consumption/ContractDou
 import { MetricCard } from "@/components/ui/MetricCard";
 
 interface ContractEffortSummaryProps {
-  contractData: {
-    totalEffort: number;
-    demandsCount: number;
-    totalHours: number;
-  };
+  totalEffort: number;
+  demandsCount: number;
+  totalHours: number;
+  finishedDemandsEffort: number;
 }
 
-export function ContractEffortSummary({
-  contractData,
-}: ContractEffortSummaryProps) {
+export function ContractEffortSummary(
+  contractData: ContractEffortSummaryProps
+) {
   return (
     <div className="grid gap-6 grid-cols-1">
       <ContractDoughnutChart
@@ -25,7 +24,9 @@ export function ContractEffortSummary({
         subtitle="Média de horas consumidas por demanda"
         value={
           contractData.demandsCount > 0
-            ? (contractData.totalEffort / contractData.demandsCount).toFixed(2)
+            ? (
+                contractData.finishedDemandsEffort / contractData.demandsCount
+              ).toFixed(2)
             : "0.00"
         }
         unit="horas/demanda"
