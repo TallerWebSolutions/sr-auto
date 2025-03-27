@@ -60,6 +60,9 @@ export default function HourConsumptionPage() {
     };
     totalEffort: number;
     demandsCount: number;
+    product: {
+      name: string;
+    };
   } | null>(null);
 
   useEffect(() => {
@@ -81,6 +84,7 @@ export default function HourConsumptionPage() {
           ...processedData,
           totalEffort: contractEffortData.totalEffort,
           demandsCount: contractEffortData.demandsCount,
+          product: contractEffortData.product,
         });
       } catch (err) {
         console.error("Error fetching contract data:", err);
@@ -126,18 +130,18 @@ export default function HourConsumptionPage() {
     contract,
     totalEffort,
     demandsCount,
+    product,
   } = contractData;
+
+  const productName = product.name;
 
   return (
     <main className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">
           Consumo de Horas
-          {contractId && contractId !== "0" && (
-            <span className="ml-2 text-green-600">
-              - Contrato #{contractId}
-            </span>
-          )}
+          <span className="ml-2 text-blue-600">- {productName}</span>
+          <span className="ml-2 text-green-600">- Contrato #{contractId}</span>
         </h1>
       </div>
 

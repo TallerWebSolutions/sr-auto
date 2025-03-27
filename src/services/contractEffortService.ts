@@ -16,6 +16,9 @@ type ContractEffortsResponse = {
         count: number;
       };
     };
+    product: {
+      name: string;
+    };
   };
   demand_efforts: DemandEffort[];
   demand_efforts_aggregate: {
@@ -33,6 +36,9 @@ type ContractEffortsResult = {
     end_date: string;
     total_hours: number;
   };
+  product: {
+    name: string;
+  };
   demandEfforts: DemandEffort[];
   totalEffort: number;
   demandsCount: number;
@@ -48,6 +54,9 @@ const CONTRACT_EFFORTS_QUERY = gql`
         aggregate {
           count
         }
+      }
+      product {
+        name
       }
     }
     demand_efforts(
@@ -87,6 +96,7 @@ export async function getContractTotalEffort(
         end_date: data?.contracts_by_pk?.end_date ?? "",
         total_hours: data?.contracts_by_pk?.total_hours ?? 0,
       },
+      product: data?.contracts_by_pk?.product ?? "",
       demandEfforts: data?.demand_efforts ?? [],
       totalEffort:
         data?.demand_efforts_aggregate?.aggregate?.sum?.effort_value ?? 0,
@@ -106,6 +116,9 @@ export async function getContractTotalEffort(
         start_date: "",
         end_date: "",
         total_hours: 0,
+      },
+      product: {
+        name: "",
       },
       demandEfforts: [],
       totalEffort: 0,
