@@ -143,6 +143,10 @@ const getAgeDotColor = (ageingDays: number, dotIndex: number): string => {
   return "bg-gray-300";
 };
 
+const getCardBackgroundColor = (serviceClass: ServiceClass): string => {
+  return serviceClass === "expedite" ? "bg-red-50" : "bg-white";
+};
+
 const styles = {
   rotate270: {
     transform: "rotate(270deg)",
@@ -405,7 +409,7 @@ export default function TeamBoard() {
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
-                                        className={`bg-white p-4 mb-4 rounded-lg shadow-sm border ${
+                                        className={`${getCardBackgroundColor(demand.serviceClass)} p-4 mb-4 rounded-lg shadow-sm border ${
                                           demand.isBlocked
                                             ? "border-red-300"
                                             : "border-gray-100"
