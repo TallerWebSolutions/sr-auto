@@ -347,8 +347,19 @@ export default function TeamBoard() {
                         <div style={styles.rotate270} className="font-semibold text-xs">{column.title}</div>
                       </div>
 
-                      <div className="mb-2 mt-auto font-semibold text-xs">
-                        ({column.subColumns.reduce((acc, subCol) => acc + subCol.demands.length, 0)})
+                      <div className="flex items-center justify-center mb-2 mt-auto">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-blue-500 text-white font-bold text-sm rounded-full w-8 h-8 flex items-center justify-center shadow-sm">
+                              {column.subColumns.reduce((acc, subCol) => acc + subCol.demands.length, 0)}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Total demands in {column.title}: {column.subColumns.reduce(
+                              (acc, subCol) => acc + subCol.demands.length, 0
+                            )}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   );
@@ -360,16 +371,25 @@ export default function TeamBoard() {
                     className="bg-gray-50/50 rounded-lg p-4 flex-shrink-0 flex flex-col h-[calc(100vh-178px)]"
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-gray-500 text-sm">
+                      <h3 className="font-medium text-gray-700 text-base flex items-center">
                         {column.title}
                       </h3>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
-                          {column.subColumns.reduce(
-                            (acc, subCol) => acc + subCol.demands.length,
-                            0
-                          )}
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-blue-500 text-white font-bold text-sm rounded-full min-w-[28px] h-7 flex items-center justify-center px-2 shadow-sm">
+                              {column.subColumns.reduce(
+                                (acc, subCol) => acc + subCol.demands.length,
+                                0
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Total demands in this column: {column.subColumns.reduce(
+                              (acc, subCol) => acc + subCol.demands.length, 0
+                            )}</p>
+                          </TooltipContent>
+                        </Tooltip>
                         <button
                           onClick={() => toggleColumnMinimized(column.id)}
                           className="p-1 rounded-full hover:bg-gray-200"
@@ -386,10 +406,20 @@ export default function TeamBoard() {
                           className="flex-1 flex flex-col min-h-0 bg-white rounded-lg shadow-sm"
                           style={{ width: "280px" }}
                         >
-                          <div className="p-3 border-b">
+                          <div className="p-3 border-b flex items-center justify-between">
                             <h4 className="text-sm font-semibold text-gray-700">
                               {subColumn.title}
                             </h4>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="bg-blue-100 text-blue-700 text-xs font-semibold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5">
+                                  {subColumn.demands.length}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Demands in {subColumn.title}: {subColumn.demands.length}</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                           <Droppable droppableId={subColumn.id}>
                             {(provided) => (
