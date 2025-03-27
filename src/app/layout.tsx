@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ApolloWrapper } from "@/lib/apollo-provider";
-import { Sidebar, SidebarProvider, SidebarToggle } from "@/components/ui/sidebar";
+import { Sidebar, SidebarProvider, MainContent } from "@/components/ui/sidebar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,12 +22,9 @@ export default function RootLayout({
         <SidebarProvider>
           <div className="flex min-h-screen">
             <Sidebar />
-            <div className="flex-1 transition-all duration-300">
-              <SidebarToggle />
-              <main className="p-4 md:p-6">
-                <ApolloWrapper>{children}</ApolloWrapper>
-              </main>
-            </div>
+            <MainContent>
+              <ApolloWrapper>{children}</ApolloWrapper>
+            </MainContent>
           </div>
         </SidebarProvider>
       </body>

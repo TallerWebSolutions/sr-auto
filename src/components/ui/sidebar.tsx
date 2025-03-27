@@ -16,7 +16,7 @@ import {
   ListOrderedIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  MenuIcon
+  MenuIcon,
 } from "lucide-react";
 import { Button } from "./button";
 
@@ -25,7 +25,9 @@ type SidebarContextType = {
   toggleSidebar: () => void;
 };
 
-const SidebarContext = React.createContext<SidebarContextType | undefined>(undefined);
+const SidebarContext = React.createContext<SidebarContextType | undefined>(
+  undefined
+);
 
 export function useSidebar() {
   const context = React.useContext(SidebarContext);
@@ -39,7 +41,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = React.useState(false);
 
   const toggleSidebar = React.useCallback(() => {
-    setCollapsed(prev => !prev);
+    setCollapsed((prev) => !prev);
   }, []);
 
   return (
@@ -64,7 +66,10 @@ export function SidebarToggle() {
   );
 }
 
-export function Sidebar({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function Sidebar({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   const pathname = usePathname();
   const { collapsed, toggleSidebar } = useSidebar();
 
@@ -74,18 +79,27 @@ export function Sidebar({ className, ...props }: React.HTMLAttributes<HTMLDivEle
     { href: "/board", label: "Board", icon: LayoutDashboardIcon },
     { href: "/team-board", label: "Team Board", icon: UsersIcon },
     { href: "/lead-times", label: "Lead Times", icon: ClockIcon },
-    { href: "/hour-consumption", label: "Consumo de Horas", icon: BarChart3Icon },
+    {
+      href: "/hour-consumption",
+      label: "Consumo de Horas",
+      icon: BarChart3Icon,
+    },
     { href: "/escopo", label: "Escopo", icon: FileTextIcon },
     { href: "/status-report", label: "Status Report", icon: FileTextIcon },
-    { href: "/portfolio-units", label: "Unidades de Portfolio", icon: FolderIcon },
+    {
+      href: "/portfolio-units",
+      label: "Unidades de Portfolio",
+      icon: FolderIcon,
+    },
     { href: "/priorizacao", label: "Priorização", icon: ListOrderedIcon },
   ];
 
   return (
     <div
       className={cn(
-        "flex flex-col h-screen bg-gray-800 text-white transition-all duration-300 fixed md:relative z-10",
-        collapsed ? "w-16" : "w-64",
+        "flex flex-col h-screen bg-gray-800 text-white transition-all duration-300 fixed left-0 top-0",
+        collapsed ? "-translate-x-full md:translate-x-0 md:w-16" : "w-64",
+        "z-30",
         className
       )}
       {...props}
@@ -126,6 +140,22 @@ export function Sidebar({ className, ...props }: React.HTMLAttributes<HTMLDivEle
           })}
         </ul>
       </nav>
+    </div>
+  );
+}
+
+export function MainContent({ children }: { children: React.ReactNode }) {
+  const { collapsed } = useSidebar();
+
+  return (
+    <div
+      className={cn(
+        "flex-1 transition-all duration-300",
+        collapsed ? "md:pl-16" : "md:pl-64"
+      )}
+    >
+      <SidebarToggle />
+      <main className="p-4 md:p-6 w-full">{children}</main>
     </div>
   );
 }
