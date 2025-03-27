@@ -9,14 +9,14 @@ import {
   LayoutDashboardIcon,
   UsersIcon,
   ClockIcon,
-  BarChart3Icon,
+  BoxIcon,
   ListTodoIcon,
-  FileTextIcon,
   FolderIcon,
   ListOrderedIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   MenuIcon,
+  DollarSignIcon,
 } from "lucide-react";
 import { Button } from "./button";
 
@@ -82,10 +82,9 @@ export function Sidebar({
     {
       href: "/hour-consumption",
       label: "Consumo de Horas",
-      icon: BarChart3Icon,
+      icon: DollarSignIcon,
     },
-    { href: "/escopo", label: "Escopo", icon: FileTextIcon },
-    { href: "/status-report", label: "Status Report", icon: FileTextIcon },
+    { href: "/escopo", label: "Escopo", icon: BoxIcon },
     {
       href: "/portfolio-units",
       label: "Unidades de Portfolio",
