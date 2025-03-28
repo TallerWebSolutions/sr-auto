@@ -5,14 +5,15 @@ import { AlertTriangle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { gql, useQuery, DocumentNode } from "@apollo/client";
 import Link from "next/link";
+import { useCustomerStore } from "@/stores/customerStore";
 
 interface ParameterSelectionButtonsProps {
   parameterName: string;
 }
 
-const GET_PROJECTS = gql`
+const getProjectsQuery = (customerId: number | null) => gql`
   query GetProjects {
-    projects(where: { status: { _eq: 1 } }) {
+    projects(where: {products_projects: {product: {customer_id: {_eq: ${customerId}}}, project: {status: {_eq: 1}}}}) {
       id
       name
       status
@@ -119,15 +120,24 @@ export function ParameterSelectionButtons({
 }: ParameterSelectionButtonsProps) {
   const [options, setOptions] = useState<OptionItem[]>([]);
   const pathname = usePathname();
-
-  const queryMap: Record<string, DocumentNode> = {
-    project_id: GET_PROJECTS,
+  const { selectedCustomer } = useCustomerStore();
+  const [queryMap, setQueryMap] = useState<Record<string, DocumentNode>>({
+    project_id: getProjectsQuery(null),
     product_id: GET_PRODUCTS,
     customer_id: GET_CUSTOMERS_WITH_ACTIVE_CONTRACTS,
     contract_id: GET_CONTRACTS,
-  };
+  });
 
-  const query = queryMap[parameterName] || GET_PROJECTS;
+  useEffect(() => {
+    setQueryMap({
+      project_id: getProjectsQuery(selectedCustomer?.id || null),
+      product_id: GET_PRODUCTS,
+      customer_id: GET_CUSTOMERS_WITH_ACTIVE_CONTRACTS,
+      contract_id: GET_CONTRACTS,
+    });
+  }, [selectedCustomer]);
+
+  const query = queryMap[parameterName] || getProjectsQuery(selectedCustomer?.id || null);
 
   const { loading, error, data } = useQuery(query, {
     skip: !query,
@@ -145,14 +155,14 @@ export function ParameterSelectionButtons({
 
     const dataProcessors: Record<string, (data: QueryResult) => OptionItem[]> = {
       project_id: (data) => data.projects || [],
-      product_id: (data) => 
+      product_id: (data) =>
         (data.products || []).filter(
-          (product: OptionItem) => 
+          (product: OptionItem) =>
             product.contracts && product.contracts.length > 0
         ),
-      customer_id: (data) => 
+      customer_id: (data) =>
         (data.customers || []).filter(
-          (customer: OptionItem) => 
+          (customer: OptionItem) =>
             customer.contracts && customer.contracts.length > 0
         ),
       contract_id: (data) => data.contracts || [],
@@ -177,31 +187,31 @@ export function ParameterSelectionButtons({
 
   const formatItemLabel = (item: OptionItem) => {
     if (parameterName === "contract_id" && item.start_date) {
-      const endDateText = item.end_date 
+      const endDateText = item.end_date
         ? `até ${new Date(item.end_date).toLocaleDateString("pt-BR")}`
         : "Sem data de término";
-      
+
       return `${item.product?.name || ""} (${endDateText})`;
-    } 
-    
+    }
+
     if (parameterName === "customer_id" && item.contracts) {
       const activeContractsCount = item.contracts.length;
       return `${item.name} (${activeContractsCount} contrato${
         activeContractsCount !== 1 ? "s" : ""
       } ativo${activeContractsCount !== 1 ? "s" : ""})`;
-    } 
-    
+    }
+
     if (parameterName === "project_id") {
       return `${item.name} (Em Execução)`;
-    } 
-    
+    }
+
     if (parameterName === "product_id" && item.contracts) {
       const activeContractsCount = item.contracts.length;
       return `${item.name} (${activeContractsCount} contrato${
         activeContractsCount !== 1 ? "s" : ""
       } ativo${activeContractsCount !== 1 ? "s" : ""})`;
     }
-    
+
     return item.name;
   };
 
