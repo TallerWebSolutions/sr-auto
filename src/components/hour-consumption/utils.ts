@@ -4,6 +4,43 @@ export interface WeeklyHoursData {
   consumedHours: number;
 }
 
+export interface Effort {
+  value: number;
+  date: string;
+}
+
+export interface DemandEffort {
+  effort_value: number;
+  start_time_to_computation: string;
+}
+
+export interface ProjectAdditionalHour {
+  hours: number;
+  event_date: string;
+}
+
+export function convertToEffort(
+  demandEffort: DemandEffort | undefined
+): Effort | undefined {
+  if (!demandEffort) return undefined;
+  
+  return {
+    value: demandEffort.effort_value,
+    date: demandEffort.start_time_to_computation
+  };
+}
+
+export function convertProjectHourToEffort(
+  projectHour: ProjectAdditionalHour | undefined
+): Effort | undefined {
+  if (!projectHour) return undefined;
+  
+  return {
+    value: projectHour.hours,
+    date: projectHour.event_date
+  };
+}
+
 // Format date as DD/MM/YYYY
 export function formatDate(dateString: string): string {
   const date = new Date(dateString);

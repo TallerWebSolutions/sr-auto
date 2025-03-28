@@ -1,4 +1,4 @@
-import { WeeklyHoursData, getWeekNumber, formatWeekLabel } from './utils';
+import { WeeklyHoursData, getWeekNumber, formatWeekLabel, Effort, DemandEffort, ProjectAdditionalHour } from './utils';
 
 interface ContractsData {
   contracts: {
@@ -35,8 +35,31 @@ export function getTotalHoursFromAllContracts(contractsData: ContractsData | und
   return activeContracts.reduce((total, contract) => total + contract.total_hours, 0);
 }
 
+function convertToEfforts(
+  demandEfforts: DemandEffort[],
+  projectAdditionalHours: ProjectAdditionalHour[]
+): Effort[] {
+  const efforts: Effort[] = [];
+  
+  demandEfforts.forEach(effort => {
+    efforts.push({
+      value: effort.effort_value,
+      date: effort.start_time_to_computation
+    });
+  });
+  
+  projectAdditionalHours.forEach(additionalHour => {
+    efforts.push({
+      value: additionalHour.hours,
+      date: additionalHour.event_date
+    });
+  });
+  
+  return efforts;
+}
+
 function processEffortsToWeeklyData(
-  efforts: { effort_value: number; start_time_to_computation: string }[],
+  efforts: Effort[],
   contract: { start_date: string; end_date: string; total_hours: number },
 ): WeeklyHoursData[] {
   if (!efforts.length || !contract) {
@@ -84,12 +107,12 @@ function processEffortsToWeeklyData(
   });
   
   efforts.forEach(effort => {
-    const hoursConsumed = effort.effort_value;
+    const hoursConsumed = effort.value;
     
     if (hoursConsumed <= 0) return;
     
-    const effortDate = effort.start_time_to_computation 
-      ? new Date(effort.start_time_to_computation) 
+    const effortDate = effort.date 
+      ? new Date(effort.date) 
       : currentDate;
     
     const [weekNum, year] = getWeekNumber(effortDate);
@@ -113,7 +136,8 @@ function processEffortsToWeeklyData(
 
 export function processWeeklyHoursFromContractData(
   contractEffortData: {
-    demandEfforts: { effort_value: number; start_time_to_computation: string }[];
+    demandEfforts: DemandEffort[];
+    projectAdditionalHours: ProjectAdditionalHour[];
     contract: { start_date: string; end_date: string; total_hours: number };
   }
 ): {
@@ -127,8 +151,13 @@ export function processWeeklyHoursFromContractData(
     total_hours: number;
   };
 } {
+  const allEfforts = convertToEfforts(
+    contractEffortData.demandEfforts, 
+    contractEffortData.projectAdditionalHours
+  );
+  
   const weeklyHoursData = processEffortsToWeeklyData(
-    contractEffortData.demandEfforts,
+    allEfforts,
     contractEffortData.contract
   );
   

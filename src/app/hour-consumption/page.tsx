@@ -79,12 +79,21 @@ export default function HourConsumptionPage() {
           Number(contractId)
         );
 
-        const processedData =
-          processWeeklyHoursFromContractData(contractEffortData);
+        const processedData = processWeeklyHoursFromContractData({
+          demandEfforts: contractEffortData.demandEfforts,
+          projectAdditionalHours: contractEffortData.projectAdditionalHours,
+          contract: contractEffortData.contract
+        });
+
+        const additionalHoursTotal = contractEffortData.projectAdditionalHours.reduce(
+          (sum, item) => sum + item.hours, 0
+        );
+
+        const totalEffortFromAllSources = contractEffortData.totalEffort + additionalHoursTotal;
 
         setContractData({
           ...processedData,
-          totalEffort: contractEffortData.totalEffort,
+          totalEffort: totalEffortFromAllSources,
           demandsCount: contractEffortData.demandsCount,
           finishedDemandsEffort: contractEffortData.finishedDemandsEffort,
           product: contractEffortData.product,

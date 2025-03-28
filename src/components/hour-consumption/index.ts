@@ -6,7 +6,7 @@ export * from "./LoadingState";
 export * from "./ErrorState";
 export * from "./EmptyState";
 export { formatDate } from "./utils";
-export type { WeeklyHoursData } from "./utils";
+export type { WeeklyHoursData, Effort, DemandEffort, ProjectAdditionalHour } from "./utils";
 export {
   processWeeklyHoursFromContractData,
   getCurrentWeekIndex,

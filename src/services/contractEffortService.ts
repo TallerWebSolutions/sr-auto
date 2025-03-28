@@ -1,10 +1,6 @@
 import { gql } from "@apollo/client";
 import apolloClient from "@/lib/apollo";
-
-type DemandEffort = {
-  effort_value: number;
-  start_time_to_computation: string;
-};
+import { DemandEffort, ProjectAdditionalHour } from "@/components/hour-consumption/utils";
 
 type ContractEffortsResponse = {
   contracts_by_pk: {
@@ -18,6 +14,11 @@ type ContractEffortsResponse = {
     };
     product: {
       name: string;
+      products_projects: {
+        project: {
+          project_additional_hours: ProjectAdditionalHour[];
+        };
+      }[];
     };
   };
   demand_efforts: DemandEffort[];
@@ -47,6 +48,7 @@ type ContractEffortsResult = {
     name: string;
   };
   demandEfforts: DemandEffort[];
+  projectAdditionalHours: ProjectAdditionalHour[];
   totalEffort: number;
   demandsCount: number;
   finishedDemandsEffort: number;
@@ -65,6 +67,14 @@ const CONTRACT_EFFORTS_QUERY = gql`
       }
       product {
         name
+        products_projects {
+          project {
+            project_additional_hours {
+              hours
+              event_date
+            }
+          }
+        }
       }
     }
     demand_efforts(
@@ -107,14 +117,25 @@ export async function getContractTotalEffort(
       fetchPolicy: "network-only",
     });
 
+    const projectAdditionalHours: ProjectAdditionalHour[] = [];
+    
+    data?.contracts_by_pk?.product?.products_projects?.forEach(projectRelation => {
+      if (projectRelation.project?.project_additional_hours) {
+        projectAdditionalHours.push(...projectRelation.project.project_additional_hours);
+      }
+    });
+
     return {
       contract: {
         start_date: data?.contracts_by_pk?.start_date ?? "",
         end_date: data?.contracts_by_pk?.end_date ?? "",
         total_hours: data?.contracts_by_pk?.total_hours ?? 0,
       },
-      product: data?.contracts_by_pk?.product ?? "",
+      product: {
+        name: data?.contracts_by_pk?.product?.name ?? "",
+      },
       demandEfforts: data?.demand_efforts ?? [],
+      projectAdditionalHours,
       totalEffort:
         data?.demand_efforts_aggregate?.aggregate?.sum?.effort_value ?? 0,
       demandsCount:
@@ -140,6 +161,7 @@ export async function getContractTotalEffort(
         name: "",
       },
       demandEfforts: [],
+      projectAdditionalHours: [],
       totalEffort: 0,
       demandsCount: 0,
       finishedDemandsEffort: 0,
