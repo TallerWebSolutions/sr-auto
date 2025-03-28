@@ -12,3 +12,4 @@ export {
   getCurrentWeekIndex,
   calculateHoursNeeded,
 } from "./dataProcessing";
+export * from "./MonthlyHoursChart";

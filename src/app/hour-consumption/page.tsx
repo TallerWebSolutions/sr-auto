@@ -24,6 +24,7 @@ import {
   formatDate,
   processWeeklyHoursFromContractData,
   WeeklyHoursData,
+  MonthlyHoursChart,
 } from "@/components/hour-consumption";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import { getContractTotalEffort } from "@/services/contractEffortService";
@@ -164,6 +165,7 @@ export default function HourConsumptionPage() {
           endDate={contract.end_date}
           formatDate={formatDate}
         />
+        <MonthlyHoursChart weeklyHoursData={weeklyHoursData} />
       </div>
     </main>
   );
