@@ -28,8 +28,8 @@ export function MonthlyHoursChart({ weeklyHoursData }: MonthlyHoursChartProps) {
 
   const sortedMonths = Object.keys(monthlyData).sort();
   const monthLabels = sortedMonths.map((month) => {
-    const [, monthNum] = month.split("-");
-    return MONTH_NAMES[parseInt(monthNum) - 1];
+    const [year, monthNum] = month.split("-");
+    return `${MONTH_NAMES[parseInt(monthNum) - 1]}/${year}`;
   });
   const monthValues = sortedMonths.map((month) => monthlyData[month]);
 

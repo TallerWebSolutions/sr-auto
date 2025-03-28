@@ -82,14 +82,42 @@ export default function HourConsumptionPage() {
         const processedData = processWeeklyHoursFromContractData({
           demandEfforts: contractEffortData.demandEfforts,
           projectAdditionalHours: contractEffortData.projectAdditionalHours,
-          contract: contractEffortData.contract
+          contract: contractEffortData.contract,
         });
 
-        const additionalHoursTotal = contractEffortData.projectAdditionalHours.reduce(
-          (sum, item) => sum + item.hours, 0
+        const contractStartDate = new Date(
+          contractEffortData.contract.start_date
+        );
+        const contractEndDate = new Date(contractEffortData.contract.end_date);
+
+        const filteredDemandEfforts = contractEffortData.demandEfforts.filter(
+          (effort) => {
+            const effortDate = new Date(effort.start_time_to_computation);
+            return (
+              effortDate >= contractStartDate && effortDate <= contractEndDate
+            );
+          }
         );
 
-        const totalEffortFromAllSources = contractEffortData.totalEffort + additionalHoursTotal;
+        const filteredProjectAdditionalHours =
+          contractEffortData.projectAdditionalHours.filter((hour) => {
+            const hourDate = new Date(hour.event_date);
+            return hourDate >= contractStartDate && hourDate <= contractEndDate;
+          });
+
+        const filteredEffortTotal = filteredDemandEfforts.reduce(
+          (sum, item) => sum + item.effort_value,
+          0
+        );
+
+        const filteredAdditionalHoursTotal =
+          filteredProjectAdditionalHours.reduce(
+            (sum, item) => sum + item.hours,
+            0
+          );
+
+        const totalEffortFromAllSources =
+          filteredEffortTotal + filteredAdditionalHoursTotal;
 
         setContractData({
           ...processedData,

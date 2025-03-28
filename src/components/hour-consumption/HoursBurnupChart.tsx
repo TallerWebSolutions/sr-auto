@@ -27,8 +27,13 @@ export function HoursBurnupChart({
   endDate,
   formatDate
 }: HoursBurnupChartProps) {
+  const formatChartLabel = (weekLabel: string) => {
+    const parts = weekLabel.split('/');
+    return `${parts[0]}/${parts[1]}`;
+  };
+
   const hoursBurnupData = {
-    labels: weeklyHoursData.map(week => week.weekLabel),
+    labels: weeklyHoursData.map(week => formatChartLabel(week.weekLabel)),
     datasets: [
       {
         label: 'Escopo Total (Horas Contratadas)',

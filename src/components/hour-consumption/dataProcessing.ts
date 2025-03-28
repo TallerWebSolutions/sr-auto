@@ -9,7 +9,6 @@ interface ContractsData {
   }[];
 }
 
-// Get active contract
 export function getActiveContract(contractsData: ContractsData | undefined) {
   return contractsData?.contracts.find(contract => {
     const startDate = new Date(contract.start_date);
@@ -19,7 +18,6 @@ export function getActiveContract(contractsData: ContractsData | undefined) {
   });
 }
 
-// Get total hours from all active contracts
 export function getTotalHoursFromAllContracts(contractsData: ContractsData | undefined) {
   if (!contractsData?.contracts || contractsData.contracts.length === 0) {
     return 0;
@@ -67,13 +65,31 @@ function processEffortsToWeeklyData(
   }
 
   const currentDate = new Date();
-  const earliestDate = new Date(contract.start_date);
-  const latestDate = new Date(contract.end_date);
-
-  const weeks: WeeklyHoursData[] = [];
-  const [startWeekNum, startYear] = getWeekNumber(earliestDate);
-  const [endWeekNum, endYear] = getWeekNumber(latestDate);
+  const contractStartDate = new Date(contract.start_date);
+  const contractEndDate = new Date(contract.end_date);
   
+  const startOfFirstMonth = new Date(contractStartDate.getFullYear(), contractStartDate.getMonth(), 1);
+
+  let earliestDate = startOfFirstMonth;
+  if (efforts.length > 0) {
+    const effortDates = efforts
+      .map(e => e.date ? new Date(e.date) : null)
+      .filter(Boolean) as Date[];
+    
+    if (effortDates.length > 0) {
+      const earliestEffortDate = new Date(Math.min(...effortDates.map(d => d.getTime())));
+      earliestEffortDate.setDate(1);
+
+      if (earliestEffortDate < earliestDate) {
+        earliestDate = earliestEffortDate;
+      }
+    }
+  }
+
+  const [startWeekNum, startYear] = getWeekNumber(earliestDate);
+  const [endWeekNum, endYear] = getWeekNumber(contractEndDate);
+  
+  const weeks: WeeklyHoursData[] = [];
   let currentYear = startYear;
   let weekNum = startWeekNum;
   
@@ -151,9 +167,22 @@ export function processWeeklyHoursFromContractData(
     total_hours: number;
   };
 } {
+  const contractStartDate = new Date(contractEffortData.contract.start_date);
+  const contractEndDate = new Date(contractEffortData.contract.end_date);
+  
+  const filteredDemandEfforts = contractEffortData.demandEfforts.filter(effort => {
+    const effortDate = new Date(effort.start_time_to_computation);
+    return effortDate >= contractStartDate && effortDate <= contractEndDate;
+  });
+  
+  const filteredProjectAdditionalHours = contractEffortData.projectAdditionalHours.filter(hour => {
+    const hourDate = new Date(hour.event_date);
+    return hourDate >= contractStartDate && hourDate <= contractEndDate;
+  });
+  
   const allEfforts = convertToEfforts(
-    contractEffortData.demandEfforts, 
-    contractEffortData.projectAdditionalHours
+    filteredDemandEfforts, 
+    filteredProjectAdditionalHours
   );
   
   const weeklyHoursData = processEffortsToWeeklyData(
@@ -178,35 +207,37 @@ export function processWeeklyHoursFromContractData(
   };
 }
 
-// Find current week index for highlighting
 export function getCurrentWeekIndex(weeklyHoursData: WeeklyHoursData[]): number {
   const currentDate = new Date();
   const [currentWeekNum, currentYear] = getWeekNumber(currentDate);
   const currentWeekLabel = formatWeekLabel(currentWeekNum, currentYear);
   
-  // Find the closest week if exact match not found
   if (weeklyHoursData.length === 0) return -1;
   
   const exactMatch = weeklyHoursData.findIndex(week => week.weekLabel === currentWeekLabel);
   if (exactMatch !== -1) return exactMatch;
   
-  // If no exact match, find the closest week before current date
-  const currentDay = currentDate.getDate();
-  const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
-  
   for (let i = 0; i < weeklyHoursData.length; i++) {
     const parts = weeklyHoursData[i].weekLabel.split('/');
     const weekDay = parseInt(parts[0]);
     const weekMonth = parseInt(parts[1]);
+    const weekYear = parseInt(parts[2]);
     
-    // If this week is in a future month or the same month but future day
-    if (weekMonth > currentMonth || (weekMonth === currentMonth && weekDay > currentDay)) {
-      // Return the previous week, or 0 if this is the first week
+    if (weekYear > currentYear) {
       return i > 0 ? i - 1 : 0;
+    }
+    
+    if (weekYear === currentYear) {
+      if (weekMonth > currentDate.getMonth() + 1) {
+        return i > 0 ? i - 1 : 0;
+      }
+      
+      if (weekMonth === currentDate.getMonth() + 1 && weekDay > currentDate.getDate()) {
+        return i > 0 ? i - 1 : 0;
+      }
     }
   }
   
-  // If we get here, all weeks are before current date, return the last week
   return weeklyHoursData.length - 1;
 }
 
