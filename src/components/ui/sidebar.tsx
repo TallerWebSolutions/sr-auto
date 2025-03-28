@@ -17,8 +17,10 @@ import {
   ChevronRightIcon,
   MenuIcon,
   DollarSignIcon,
+  BuildingIcon,
 } from "lucide-react";
 import { Button } from "./button";
+import { CustomerSelector } from "./CustomerSelector";
 
 type SidebarContextType = {
   collapsed: boolean;
@@ -118,6 +120,15 @@ export function Sidebar({
           )}
         </Button>
       </div>
+
+      {collapsed ? (
+        <div className="flex justify-center py-2">
+          <BuildingIcon className="h-5 w-5 text-gray-400" />
+        </div>
+      ) : (
+        <CustomerSelector />
+      )}
+
       <nav className="flex-1 overflow-y-auto">
         <ul className="space-y-1 p-2">
           {navItems.map((item) => {

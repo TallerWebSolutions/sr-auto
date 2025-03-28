@@ -1,11 +1,10 @@
 "use client";
 
 import { gql, useQuery } from "@apollo/client";
-import { useSearchParams } from "next/navigation";
-import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import { DemandCard } from "@/components/ui/DemandCard";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCustomerStore } from "@/stores/customerStore";
 
 // Add style for rotated text
 const styles = {
@@ -51,7 +50,7 @@ interface BoardResponse {
   };
 }
 
-const BOARD_DEMANDS_QUERY = (customerId: string | null) => gql`
+const BOARD_DEMANDS_QUERY = (customerId: number | null) => gql`
   query BoardDemandsQuery {
     demands(where: {customer_id: {_eq: ${customerId}}}) {
       id
@@ -74,9 +73,7 @@ const BOARD_DEMANDS_QUERY = (customerId: string | null) => gql`
 `;
 
 export default function BoardPage() {
-  const searchParams = useSearchParams();
-  const customerId = searchParams.get('customer_id') || "0";
-  const isCustomerIdEmpty = !customerId || customerId === "0";
+  const { selectedCustomer } = useCustomerStore();
   const [groupedDemands, setGroupedDemands] = useState<Record<string, BoardDemand[]>>({
     "Backlog": [],
     "Upstream": [],
@@ -89,21 +86,24 @@ export default function BoardPage() {
   const [minimizedColumns, setMinimizedColumns] = useState<string[]>([]);
 
   const toggleColumnMinimized = (columnName: string) => {
-    setMinimizedColumns(prev => 
-      prev.includes(columnName) 
-        ? prev.filter(col => col !== columnName) 
+    setMinimizedColumns(prev =>
+      prev.includes(columnName)
+        ? prev.filter(col => col !== columnName)
         : [...prev, columnName]
     );
   };
-  
+
   const isColumnMinimized = (columnName: string) => {
     return minimizedColumns.includes(columnName);
   };
 
-  const { loading, error, data } = useQuery<BoardResponse>(BOARD_DEMANDS_QUERY(customerId), {
-    fetchPolicy: "network-only",
-    skip: isCustomerIdEmpty
-  });
+  const { loading, error, data } = useQuery<BoardResponse>(
+    BOARD_DEMANDS_QUERY(selectedCustomer?.id || null),
+    {
+      fetchPolicy: "network-only",
+      skip: !selectedCustomer
+    }
+  );
 
   useEffect(() => {
     if (data?.demands) {
@@ -158,23 +158,23 @@ export default function BoardPage() {
 
   const getDemandStatus = (demand: BoardResponse['demands'][0]): string => {
     if (demand.discarded_at) return "Descartado";
-    
+
     const stageName = demand.stage?.name || "";
-    
+
     if (["Done", "Arquivado"].includes(stageName)) return "Concluídas";
     if (["Ready to Dev", "Developing", "Ready to HMG", "Homologating", "Ready to Deploy"].includes(stageName)) return "Downstream";
     if (stageName === "Options Inventory") return "Options";
     if (["Waiting to Synthesis", "Synthesis", "In Analysis", "Ready to Analysis"].includes(stageName)) return "Upstream";
     if (stageName === "Backlog") return "Backlog";
-    
+
     // Fallback to the original logic
     if (demand.end_date) return "Concluídas";
     if (demand.commitment_date) return "Downstream";
-    
+
     return "Backlog";
   };
 
-  if (isCustomerIdEmpty) {
+  if (!selectedCustomer) {
     return (
       <main className="container mx-auto p-4">
         <div className="flex items-center justify-between mb-8">
@@ -182,8 +182,7 @@ export default function BoardPage() {
         </div>
         <div className="bg-gray-100 p-6 rounded-lg mb-8">
           <h2 className="text-xl font-semibold mb-4">Selecione um Cliente</h2>
-          <p className="mb-4">Selecione um cliente para visualizar suas demandas no board.</p>
-          <ParameterSelectionButtons parameterName="customer_id" />
+          <p className="mb-4">Selecione um cliente no menu lateral para visualizar suas demandas no board.</p>
         </div>
       </main>
     );
@@ -211,32 +210,32 @@ export default function BoardPage() {
 
   const renderColumn = (columnName: string, demands: BoardDemand[]) => {
     const isMinimized = isColumnMinimized(columnName);
-    
+
     if (isMinimized) {
       return (
         <div className="bg-gray-100 p-2 rounded-lg flex flex-col items-center justify-between" style={{ width: '40px', minHeight: '300px' }}>
-          <button 
+          <button
             onClick={() => toggleColumnMinimized(columnName)}
             className="mb-2 p-1 rounded-full hover:bg-gray-200 mt-2"
             title={`Expandir ${columnName}`}
           >
             <ChevronRight size={18} />
           </button>
-          
+
           <div className="flex-grow flex flex-col justify-center">
             <div style={styles.rotate270} className="font-semibold text-xs">{columnName}</div>
           </div>
-          
+
           <div className="mb-2 mt-auto font-semibold text-xs">({demands.length})</div>
         </div>
       );
     }
-    
+
     return (
       <div className="bg-gray-100 p-4 rounded-lg flex-1">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-center flex-1">{columnName} ({demands.length})</h2>
-          <button 
+          <button
             onClick={() => toggleColumnMinimized(columnName)}
             className="p-1 rounded-full hover:bg-gray-200"
             title={`Minimizar ${columnName}`}
@@ -256,7 +255,7 @@ export default function BoardPage() {
                   return new Date(demand.end_date) >= twoWeeksAgo;
                 })
                 .map(demand => (
-                  <DemandCard 
+                  <DemandCard
                     key={demand.id}
                     demand={demand}
                   />
@@ -268,7 +267,7 @@ export default function BoardPage() {
                 twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
                 return new Date(demand.end_date) < twoWeeksAgo;
               }) && (
-                <button 
+                <button
                   className="w-full p-2 mt-4 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                   onClick={() => setShowAllCompleted(true)}
                 >
@@ -276,7 +275,7 @@ export default function BoardPage() {
                 </button>
               )}
               {showAllCompleted && (
-                <button 
+                <button
                   className="w-full p-2 mt-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
                   onClick={() => setShowAllCompleted(false)}
                 >
@@ -287,7 +286,7 @@ export default function BoardPage() {
           ) : (
             <>
               {demands.map(demand => (
-                <DemandCard 
+                <DemandCard
                   key={demand.id}
                   demand={demand}
                 />
@@ -310,9 +309,8 @@ export default function BoardPage() {
         <h1 className="text-3xl font-bold">
           Board de Demandas: {data?.customers_by_pk?.name || 'Cliente'}
         </h1>
-        {isCustomerIdEmpty && <ParameterSelectionButtons parameterName="customer_id" />}
       </div>
-      
+
       <div className="flex gap-4 mb-8 items-stretch">
         {Object.entries(groupedDemands)
           .filter(([status]) => status !== "Descartado")
@@ -327,7 +325,7 @@ export default function BoardPage() {
         <h2 className="text-xl font-semibold mb-4 text-center">Descartado ({groupedDemands["Descartado"].length})</h2>
         <div className="grid grid-cols-3 gap-4">
           {groupedDemands["Descartado"].map(demand => (
-            <DemandCard 
+            <DemandCard
               key={demand.id}
               demand={demand}
             />
@@ -341,4 +339,4 @@ export default function BoardPage() {
       </div>
     </main>
   );
-} 
+}

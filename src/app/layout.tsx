@@ -19,14 +19,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body className={inter.className}>
-        <SidebarProvider>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <MainContent>
-              <ApolloWrapper>{children}</ApolloWrapper>
-            </MainContent>
-          </div>
-        </SidebarProvider>
+        <ApolloWrapper>
+          <SidebarProvider>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <MainContent>
+                {children}
+              </MainContent>
+            </div>
+          </SidebarProvider>
+        </ApolloWrapper>
       </body>
     </html>
   );
