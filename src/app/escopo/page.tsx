@@ -6,20 +6,24 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
   PointElement,
   LineElement,
-  Title, 
-  Tooltip, 
+  Title,
+  Tooltip,
   Legend,
   TooltipItem
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 import { MetricCard } from "@/components/ui/MetricCard";
+import { useCustomerStore } from "@/stores/customerStore";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 
 ChartJS.register(
   CategoryScale,
@@ -69,7 +73,7 @@ const getProjectQuery = (projectId: string | null) => gql`
 const getScopeQuery = (projectId: string | null) => gql`
   query ProjectScopeQuery {
     demands(
-      where: {project_id: {_eq: ${projectId}}}, 
+      where: {project_id: {_eq: ${projectId}}},
       order_by: {end_date: desc, commitment_date: desc}
     ) {
       id
@@ -101,21 +105,118 @@ interface WeeklyData {
   deliveredDemands: number;
 }
 
+// ProjectSelectionWrapper component to handle automatic selection when there's only one project
+function ProjectSelectionWrapper() {
+  const { selectedCustomer } = useCustomerStore();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [shouldShowSelector, setShouldShowSelector] = useState(false);
+
+  // Custom query to get projects for the current customer
+  const getProjectsQuery = gql`
+    query GetProjects {
+      projects(where: {products_projects: {product: {customer_id: {_eq: ${selectedCustomer?.id || null}}}, project: {status: {_eq: 1}}}}) {
+        id
+        name
+        status
+      }
+    }
+  `;
+
+  const { loading, error, data } = useQuery(getProjectsQuery, {
+    skip: !selectedCustomer?.id,
+    fetchPolicy: "network-only"
+  });
+
+  useEffect(() => {
+    if (loading || !data) return;
+
+    const projects = data.projects || [];
+
+    // If no projects, show selector with empty state
+    if (projects.length === 0) {
+      setIsLoading(false);
+      setShouldShowSelector(true);
+      return;
+    }
+
+    // If only one project, automatically select it
+    if (projects.length === 1) {
+      const projectId = projects[0].id;
+      router.push(`${window.location.pathname}?project_id=${projectId}`);
+      return;
+    }
+
+    // If multiple projects, show selector
+    setIsLoading(false);
+    setShouldShowSelector(true);
+  }, [data, loading, router]);
+
+  if (loading || isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-500">Carregando projetos...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
+        <div className="rounded-full bg-red-100 p-3 mb-4">
+          <AlertTriangle className="h-6 w-6 text-red-600" />
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Erro ao carregar projetos</h3>
+        <p className="text-red-500 mb-4">{error.message}</p>
+      </div>
+    );
+  }
+
+  if (shouldShowSelector) {
+    return <ParameterSelectionButtons parameterName="project_id" />;
+  }
+
+  return null;
+}
+
 export default function ScopePage() {
+  const { selectedCustomer } = useCustomerStore();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const projectId = searchParams.get('project_id') || "0";
   const isProjectIdEmpty = !projectId || projectId === "0";
+
+  // Store previous customer ID to detect changes
+  const [previousCustomerId, setPreviousCustomerId] = useState<number | null>(null);
+
+  // When customer changes, reset the URL to remove project_id
+  useEffect(() => {
+    // If this is the first render or if the customer ID hasn't changed, do nothing
+    if (previousCustomerId === null) {
+      setPreviousCustomerId(selectedCustomer?.id || null);
+      return;
+    }
+
+    // If customer has changed and a project is selected, reset the URL
+    if (previousCustomerId !== selectedCustomer?.id && !isProjectIdEmpty) {
+      router.push(window.location.pathname);
+    }
+
+    // Update the previous customer ID
+    setPreviousCustomerId(selectedCustomer?.id || null);
+  }, [selectedCustomer, isProjectIdEmpty, previousCustomerId, router]);
 
   const { loading: demandsLoading, error: demandsError, data: demandsData } = useQuery<DemandsResponse>(getScopeQuery(projectId), {
     fetchPolicy: "network-only",
     skip: isProjectIdEmpty
   });
-  
+
   const { loading: projectLoading, error: projectError, data: projectData } = useQuery<ProjectResponse>(getProjectQuery(projectId), {
     fetchPolicy: "network-only",
     skip: isProjectIdEmpty
   });
-  
+
   const loading = demandsLoading || projectLoading;
   const error = demandsError || projectError;
 
@@ -125,7 +226,7 @@ export default function ScopePage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Análise de Escopo</h1>
         </div>
-        <ParameterSelectionButtons parameterName="project_id" />
+        <ProjectSelectionWrapper />
       </main>
     );
   }
@@ -149,20 +250,20 @@ export default function ScopePage() {
   const formatWeekLabel = (weekNumber: number, year: number): string => {
     // Get the first day of the year
     const firstDayOfYear = new Date(year, 0, 1);
-    
+
     // Calculate the first Sunday of the year
     const dayOfWeek = firstDayOfYear.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const daysUntilFirstSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
     const firstSunday = new Date(year, 0, 1 + daysUntilFirstSunday);
-    
+
     // Calculate the Sunday of the given week
     const sundayOfWeek = new Date(firstSunday);
     sundayOfWeek.setDate(firstSunday.getDate() + (weekNumber - 1) * 7);
-    
+
     // Format the date as DD/MM
     const day = sundayOfWeek.getDate().toString().padStart(2, '0');
     const month = (sundayOfWeek.getMonth() + 1).toString().padStart(2, '0');
-    
+
     return `${day}/${month}`;
   };
 
@@ -211,7 +312,7 @@ export default function ScopePage() {
             latestDate = creationDate;
           }
         }
-        
+
         if (demand.end_date) {
           const endDate = new Date(demand.end_date);
           if (!latestDate || endDate > latestDate) {
@@ -229,17 +330,17 @@ export default function ScopePage() {
     const weeks: WeeklyData[] = [];
     const currentWeek = getWeekNumber(earliestDate);
     const endWeek = getWeekNumber(latestDate);
-    
+
     let currentYear = currentWeek[1];
     let weekNum = currentWeek[0];
-    
+
     while (currentYear < endWeek[1] || (currentYear === endWeek[1] && weekNum <= endWeek[0])) {
       weeks.push({
         weekLabel: formatWeekLabel(weekNum, currentYear),
         totalDemands: 0,
         deliveredDemands: 0
       });
-      
+
       weekNum++;
       if (weekNum > 52) {
         weekNum = 1;
@@ -259,7 +360,7 @@ export default function ScopePage() {
         const creationDate = new Date(demand.creation_date);
         const [weekNum, year] = getWeekNumber(creationDate);
         const weekLabel = formatWeekLabel(weekNum, year);
-        
+
         // Find the index of this week in our array
         const weekIndex = weeks.findIndex(w => w.weekLabel === weekLabel);
         if (weekIndex !== -1) {
@@ -279,14 +380,14 @@ export default function ScopePage() {
           }
         }
       }
-      
+
       if (demand.end_date) {
         const endDate = new Date(demand.end_date);
         // Only count delivered demands up to the current date
         if (endDate <= currentDate) {
           const [weekNum, year] = getWeekNumber(endDate);
           const weekLabel = formatWeekLabel(weekNum, year);
-          
+
           // Find the index of this week in our array
           const weekIndex = weeks.findIndex(w => w.weekLabel === weekLabel);
           if (weekIndex !== -1) {
@@ -303,41 +404,41 @@ export default function ScopePage() {
   };
 
   const weeklyData = processWeeklyData();
-  
+
   // Find current week index for highlighting
   const getCurrentWeekIndex = (): number => {
     const currentDate = new Date();
     const [currentWeekNum, currentYear] = getWeekNumber(currentDate);
     const currentWeekLabel = formatWeekLabel(currentWeekNum, currentYear);
-    
+
     // Find the closest week if exact match not found
     if (weeklyData.length === 0) return -1;
-    
+
     const exactMatch = weeklyData.findIndex(week => week.weekLabel === currentWeekLabel);
     if (exactMatch !== -1) return exactMatch;
-    
+
     // If no exact match, find the closest week before current date
     const currentDay = currentDate.getDate();
     const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
-    
+
     for (let i = 0; i < weeklyData.length; i++) {
       const parts = weeklyData[i].weekLabel.split('/');
       const weekDay = parseInt(parts[0]);
       const weekMonth = parseInt(parts[1]);
-      
+
       // If this week is in a future month or the same month but future day
       if (weekMonth > currentMonth || (weekMonth === currentMonth && weekDay > currentDay)) {
         // Return the previous week, or 0 if this is the first week
         return i > 0 ? i - 1 : 0;
       }
     }
-    
+
     // If we get here, all weeks are before current date, return the last week
     return weeklyData.length - 1;
   };
-  
+
   const currentWeekIndex = getCurrentWeekIndex();
-  
+
   // Prepare chart data for burnup
   const burnupData = {
     labels: weeklyData.map(week => week.weekLabel),
@@ -356,7 +457,7 @@ export default function ScopePage() {
         data: weeklyData.map((_, index) => {
           const totalWeeks = weeklyData.length;
           if (totalWeeks === 0) return 0;
-          
+
           const latestScope = weeklyData[weeklyData.length - 1].totalDemands;
           return (latestScope / totalWeeks) * (index + 1);
         }),
@@ -495,8 +596,8 @@ export default function ScopePage() {
           <div className="text-red-500 bg-red-100 p-3 rounded">
             {error.message}
           </div>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
           >
             Tentar novamente
@@ -514,19 +615,19 @@ export default function ScopePage() {
   // Calculate demands needed to reach ideal progress
   const calculateDemandsNeeded = (): number => {
     if (weeklyData.length === 0 || currentWeekIndex === -1) return 0;
-    
+
     // Get the ideal progress for the current week
     const totalWeeks = weeklyData.length;
     const latestScope = weeklyData[weeklyData.length - 1].totalDemands;
     const idealProgress = (latestScope / totalWeeks) * (currentWeekIndex + 1);
-    
+
     // Calculate how many more demands need to be delivered
     const currentDelivered = weeklyData[currentWeekIndex].deliveredDemands;
     const demandsNeeded = Math.max(0, Math.ceil(idealProgress - currentDelivered));
-    
+
     return demandsNeeded;
   };
-  
+
   const demandsNeeded = calculateDemandsNeeded();
 
   // Get project date information for display
@@ -549,7 +650,7 @@ export default function ScopePage() {
           Total de demandas: <span className="font-semibold">{totalDemands}</span>
         </div>
       </div>
-      
+
       {demandsData?.demands && demandsData.demands.length > 0 ? (
         <>
           <div className="grid gap-6 md:grid-cols-3 mb-6">
@@ -633,10 +734,10 @@ export default function ScopePage() {
                     const deliveryDate = formatDate(demand.end_date);
                     const isDelivered = demand.end_date !== null;
                     const isDiscarded = demand.discarded_at !== null;
-                    
+
                     let statusClass = "bg-yellow-100 text-yellow-800"; // In progress
                     let statusText = "Em Andamento";
-                    
+
                     if (isDelivered) {
                       statusClass = "bg-green-100 text-green-800";
                       statusText = "Entregue";
@@ -644,11 +745,11 @@ export default function ScopePage() {
                       statusClass = "bg-red-100 text-red-800";
                       statusText = "Descartada";
                     }
-                    
+
                     // Determine if this demand is included in scope calculations
                     const isIncludedInScope = !isDiscarded;
                     const rowClass = isIncludedInScope ? "" : "opacity-60";
-                    
+
                     return (
                       <tr key={demand.id} className={`hover:bg-gray-50 ${rowClass}`}>
                         <td className="py-3 px-4 text-sm font-medium text-gray-900">
@@ -687,4 +788,4 @@ export default function ScopePage() {
       )}
     </main>
   );
-} 
+}

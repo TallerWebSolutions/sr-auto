@@ -45,6 +45,7 @@ const DEMANDS_QUERY = (projectId: string | null) => gql`
 `;
 
 // ProjectSelectionWrapper component to handle automatic selection when there's only one project
+// @TODO: This is a duplicate of the ProjectSelectionWrapper component in the lead-times page
 function ProjectSelectionWrapper() {
   const { selectedCustomer } = useCustomerStore();
   const router = useRouter();

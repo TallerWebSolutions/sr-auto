@@ -5,7 +5,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useSearchParams } from "next/navigation";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useCustomerStore } from "@/stores/customerStore";
+import { useRouter } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
 
 interface PriorizacaoResponse {
   demands: Demand[];
@@ -95,14 +98,14 @@ const StageCard = ({ title, count }: { title: string; count: number }) => (
 
 const WorkItemType = ({ typeId }: { typeId: number | null }) => {
   if (!typeId) return <span className="text-gray-400 italic">-</span>;
-  
+
   const config = workItemTypeConfig[typeId];
   if (!config) return <span className="text-gray-500">Tipo {typeId}</span>;
-  
+
   return (
-    <span 
-      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
-      style={{ 
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+      style={{
         backgroundColor: `${config.color}20`,
         color: config.color
       }}
@@ -180,8 +183,8 @@ const ErrorState = ({ message }: { message: string }) => (
       <div className="text-red-500 bg-red-100 p-3 rounded">
         {message}
       </div>
-      <button 
-        onClick={() => window.location.reload()} 
+      <button
+        onClick={() => window.location.reload()}
         className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
       >
         Tentar novamente
@@ -190,10 +193,107 @@ const ErrorState = ({ message }: { message: string }) => (
   </main>
 );
 
+// ProjectSelectionWrapper component to handle automatic selection when there's only one project
+function ProjectSelectionWrapper() {
+  const { selectedCustomer } = useCustomerStore();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [shouldShowSelector, setShouldShowSelector] = useState(false);
+
+  // Custom query to get projects for the current customer
+  const getProjectsQuery = gql`
+    query GetProjects {
+      projects(where: {products_projects: {product: {customer_id: {_eq: ${selectedCustomer?.id || null}}}, project: {status: {_eq: 1}}}}) {
+        id
+        name
+        status
+      }
+    }
+  `;
+
+  const { loading, error, data } = useQuery(getProjectsQuery, {
+    skip: !selectedCustomer?.id,
+    fetchPolicy: "network-only"
+  });
+
+  useEffect(() => {
+    if (loading || !data) return;
+
+    const projects = data.projects || [];
+
+    // If no projects, show selector with empty state
+    if (projects.length === 0) {
+      setIsLoading(false);
+      setShouldShowSelector(true);
+      return;
+    }
+
+    // If only one project, automatically select it
+    if (projects.length === 1) {
+      const projectId = projects[0].id;
+      router.push(`${window.location.pathname}?project_id=${projectId}`);
+      return;
+    }
+
+    // If multiple projects, show selector
+    setIsLoading(false);
+    setShouldShowSelector(true);
+  }, [data, loading, router]);
+
+  if (loading || isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-500">Carregando projetos...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
+        <div className="rounded-full bg-red-100 p-3 mb-4">
+          <AlertTriangle className="h-6 w-6 text-red-600" />
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Erro ao carregar projetos</h3>
+        <p className="text-red-500 mb-4">{error.message}</p>
+      </div>
+    );
+  }
+
+  if (shouldShowSelector) {
+    return <ParameterSelectionButtons parameterName="project_id" />;
+  }
+
+  return null;
+}
+
 export default function PriorizacaoPage() {
+  const { selectedCustomer } = useCustomerStore();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const projectId = searchParams.get('project_id') || "0";
   const isProjectIdEmpty = !projectId || projectId === "0";
+
+  // Store previous customer ID to detect changes
+  const [previousCustomerId, setPreviousCustomerId] = useState<number | null>(null);
+
+  // When customer changes, reset the URL to remove project_id
+  useEffect(() => {
+    // If this is the first render or if the customer ID hasn't changed, do nothing
+    if (previousCustomerId === null) {
+      setPreviousCustomerId(selectedCustomer?.id || null);
+      return;
+    }
+
+    // If customer has changed and a project is selected, reset the URL
+    if (previousCustomerId !== selectedCustomer?.id && !isProjectIdEmpty) {
+      router.push(window.location.pathname);
+    }
+
+    // Update the previous customer ID
+    setPreviousCustomerId(selectedCustomer?.id || null);
+  }, [selectedCustomer, isProjectIdEmpty, previousCustomerId, router]);
 
   const { loading, error, data } = useQuery<PriorizacaoResponse>(PRIORIZACAO_QUERY(projectId), {
     fetchPolicy: "network-only",
@@ -208,7 +308,7 @@ export default function PriorizacaoPage() {
     return (
       <main className="container mx-auto p-4">
         <PageHeader title="Priorização" />
-        <ParameterSelectionButtons parameterName="project_id" />
+        <ProjectSelectionWrapper />
       </main>
     );
   }
