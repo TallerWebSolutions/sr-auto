@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AlertTriangle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { gql, useQuery, DocumentNode } from "@apollo/client";
@@ -143,7 +143,9 @@ export function ParameterSelectionButtons({
     skip: !query,
   });
 
-  const generateUrl = (id: number) => `${pathname}?${parameterName}=${id}`;
+  const generateUrl = useCallback((id: number) => {
+    return `${pathname}?${parameterName}=${id}`;
+  }, [pathname, parameterName]);
 
   useEffect(() => {
     if (!data) return;
