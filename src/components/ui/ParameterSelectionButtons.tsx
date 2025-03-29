@@ -143,6 +143,8 @@ export function ParameterSelectionButtons({
     skip: !query,
   });
 
+  const generateUrl = (id: number) => `${pathname}?${parameterName}=${id}`;
+
   useEffect(() => {
     if (!data) return;
 
@@ -170,11 +172,15 @@ export function ParameterSelectionButtons({
 
     const processor = dataProcessors[parameterName];
     if (processor) {
-      setOptions(processor(data));
-    }
-  }, [data, parameterName]);
+      const processedOptions = processor(data);
+      setOptions(processedOptions);
 
-  const generateUrl = (id: number) => `${pathname}?${parameterName}=${id}`;
+      // If there's only one option, automatically redirect to it
+      if (processedOptions.length === 1) {
+        window.location.href = generateUrl(processedOptions[0].id);
+      }
+    }
+  }, [data, parameterName, generateUrl, pathname]);
 
   const parameterTitles: Record<string, string> = {
     project_id: "Projeto em Execução",
