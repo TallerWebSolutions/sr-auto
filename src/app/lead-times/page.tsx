@@ -7,18 +7,22 @@ import { DemandCard } from "@/components/ui/DemandCard";
 import { useSearchParams } from "next/navigation";
 import { ParameterSelectionButtons } from "@/components/ui/ParameterSelectionButtons";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  LineElement, 
-  Title, 
-  Tooltip, 
-  Legend, 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
   TooltipItem
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { useCustomerStore } from "@/stores/customerStore";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 
 ChartJS.register(
   CategoryScale,
@@ -75,8 +79,85 @@ interface DemandWithLeadTime {
   lead_time_days: number;
 }
 
+// ProjectSelectionWrapper component to handle automatic selection when there's only one project
+function ProjectSelectionWrapper() {
+  const { selectedCustomer } = useCustomerStore();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [shouldShowSelector, setShouldShowSelector] = useState(false);
+
+  // Custom query to get projects for the current customer
+  const getProjectsQuery = gql`
+    query GetProjects {
+      projects(where: {products_projects: {product: {customer_id: {_eq: ${selectedCustomer?.id || null}}}, project: {status: {_eq: 1}}}}) {
+        id
+        name
+        status
+      }
+    }
+  `;
+
+  const { loading, error, data } = useQuery(getProjectsQuery, {
+    skip: !selectedCustomer?.id,
+    fetchPolicy: "network-only"
+  });
+
+  useEffect(() => {
+    if (loading || !data) return;
+
+    const projects = data.projects || [];
+
+    // If no projects, show selector with empty state
+    if (projects.length === 0) {
+      setIsLoading(false);
+      setShouldShowSelector(true);
+      return;
+    }
+
+    // If only one project, automatically select it
+    if (projects.length === 1) {
+      const projectId = projects[0].id;
+      router.push(`${window.location.pathname}?project_id=${projectId}`);
+      return;
+    }
+
+    // If multiple projects, show selector
+    setIsLoading(false);
+    setShouldShowSelector(true);
+  }, [data, loading, router]);
+
+  if (loading || isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-500">Carregando projetos...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
+        <div className="rounded-full bg-red-100 p-3 mb-4">
+          <AlertTriangle className="h-6 w-6 text-red-600" />
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Erro ao carregar projetos</h3>
+        <p className="text-red-500 mb-4">{error.message}</p>
+      </div>
+    );
+  }
+
+  if (shouldShowSelector) {
+    return <ParameterSelectionButtons parameterName="project_id" />;
+  }
+
+  return null;
+}
+
 export default function LeadTimesPage() {
+  const { selectedCustomer } = useCustomerStore();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const projectId = searchParams.get('project_id') || "0";
   const isProjectIdEmpty = !projectId || projectId === "0";
 
@@ -85,34 +166,54 @@ export default function LeadTimesPage() {
     skip: isProjectIdEmpty
   });
 
+  // Store previous customer ID to detect changes
+  const [previousCustomerId, setPreviousCustomerId] = useState<number | null>(null);
+
+  // When customer changes, reset the URL to remove project_id
+  useEffect(() => {
+    // If this is the first render or if the customer ID hasn't changed, do nothing
+    if (previousCustomerId === null) {
+      setPreviousCustomerId(selectedCustomer?.id || null);
+      return;
+    }
+
+    // If customer has changed and a project is selected, reset the URL
+    if (previousCustomerId !== selectedCustomer?.id && !isProjectIdEmpty) {
+      router.push(window.location.pathname);
+    }
+
+    // Update the previous customer ID
+    setPreviousCustomerId(selectedCustomer?.id || null);
+  }, [selectedCustomer, isProjectIdEmpty, previousCustomerId, router]);
+
   if (isProjectIdEmpty) {
     return (
       <main className="container mx-auto p-4">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Lead Times</h1>
         </div>
-        <ParameterSelectionButtons parameterName="project_id" />
+        <ProjectSelectionWrapper />
       </main>
     );
   }
-  
+
   const demandsWithLeadTimes: DemandWithLeadTime[] = [];
-  
+
   if (data?.demands) {
     data.demands.forEach(demand => {
       if (
-        demand.discarded_at !== null || 
-        demand.end_date === null || 
+        demand.discarded_at !== null ||
+        demand.end_date === null ||
         demand.commitment_date === null
       ) {
         return;
       }
-      
+
       const endDate = new Date(demand.end_date);
       const commitmentDate = new Date(demand.commitment_date);
       const diffTime = Math.abs(endDate.getTime() - commitmentDate.getTime());
       const diffDays = diffTime / (1000 * 60 * 60 * 24);
-      
+
       demandsWithLeadTimes.push({
         id: demand.id,
         slug: demand.slug,
@@ -127,24 +228,24 @@ export default function LeadTimesPage() {
 
   const calculateP80 = (values: number[]): string => {
     if (values.length === 0) return "0";
-    
+
     const sortedValues = [...values].sort((a, b) => a - b);
-    
+
     const desiredPercentile = 80;
     const rank = (desiredPercentile / 100.0) * (sortedValues.length - 1);
-    
+
     const lowerIndex = Math.floor(rank);
-    
+
     const lower = sortedValues[lowerIndex];
     const upper = sortedValues[lowerIndex + 1];
-    
+
     const interpolatedValue = lower + ((upper - lower) * (rank - lowerIndex));
-    
+
     return interpolatedValue.toFixed(2);
   };
-  
+
   const leadTimeValues = demandsWithLeadTimes.map(demand => demand.lead_time_days);
-  
+
   const p80LeadTime = calculateP80(leadTimeValues);
 
   const getSundayOfWeek = (date: Date): Date => {
@@ -170,14 +271,14 @@ export default function LeadTimesPage() {
   const formatWeekRange = (startOfWeek: Date): string => {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 6);
-    
+
     const formatDay = (date: Date) => {
       const day = date.getDate().toString().padStart(2, '0');
       const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
       const month = months[date.getMonth()];
       return `${day}/${month}`;
     };
-    
+
     return `${formatDay(startOfWeek)} - ${formatDay(endOfWeek)}`;
   };
 
@@ -199,13 +300,13 @@ export default function LeadTimesPage() {
 
     const firstEndDate = new Date(sortedDemands[0].end_date);
     const firstWeekSunday = getSundayOfWeek(firstEndDate);
-    
+
     const lastDate = new Date();
     const lastWeekSunday = getSundayOfWeek(lastDate);
 
     const sundays: Date[] = [];
     let nextSunday = new Date(firstWeekSunday);
-    
+
     while (nextSunday <= lastWeekSunday) {
       sundays.push(new Date(nextSunday));
       const newDate = new Date(nextSunday);
@@ -214,12 +315,12 @@ export default function LeadTimesPage() {
     }
 
     const weeklyP80Values: number[] = [];
-    
+
     sundays.forEach((sunday, index) => {
       const demandsUpToDate = sortedDemands.filter(
         demand => new Date(demand.end_date) <= sunday
       );
-      
+
       if (demandsUpToDate.length > 0) {
         const leadTimesUpToDate = demandsUpToDate.map(d => d.lead_time_days);
         const p80Value = parseFloat(calculateP80(leadTimesUpToDate));
@@ -323,23 +424,23 @@ export default function LeadTimesPage() {
 
   const groupDemandsByWeek = () => {
     const groupedDemands: Record<string, DemandWithLeadTime[]> = {};
-    
+
     const sortedDemands = [...demandsWithLeadTimes].sort(
       (a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime()
     );
-    
+
     sortedDemands.forEach(demand => {
       const endDate = new Date(demand.end_date);
       const startOfWeek = getStartOfWeek(endDate);
       const weekKey = startOfWeek.toISOString();
-      
+
       if (!groupedDemands[weekKey]) {
         groupedDemands[weekKey] = [];
       }
-      
+
       groupedDemands[weekKey].push(demand);
     });
-    
+
     return groupedDemands;
   };
 
@@ -394,8 +495,8 @@ export default function LeadTimesPage() {
           <div className="text-red-500 bg-red-100 p-3 rounded">
             {error.message}
           </div>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
           >
             Tentar novamente
@@ -421,7 +522,7 @@ export default function LeadTimesPage() {
           Total entregues: <span className="font-semibold">{demandsWithLeadTimes.length}</span>
         </div>
       </div>
-      
+
       {demandsWithLeadTimes.length > 0 ? (
         <>
           <div className="grid gap-6 md:grid-cols-3 mb-6">
@@ -484,7 +585,7 @@ export default function LeadTimesPage() {
                     const startOfWeek = new Date(weekKey);
                     const weekRange = formatWeekRange(startOfWeek);
                     const weekDemands = groupedDemands[weekKey];
-                    
+
                     return (
                       <div key={weekKey} className="mb-8">
                         <div className="flex items-center mb-4 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
